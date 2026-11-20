@@ -202,6 +202,17 @@ select,input[type=time]{width:100%;max-width:100%;min-width:0;padding:9px 10px;b
 .sheet{background:var(--bg);max-height:88%;overflow:auto;border-radius:16px 16px 0 0;border-top:3px solid var(--gold);padding:16px 16px calc(24px + env(safe-area-inset-bottom));max-width:680px;width:100%;margin:0 auto;display:grid;gap:10px}
 .sheet .close{position:sticky;top:-16px;z-index:2;justify-self:end;margin:-6px -6px 0 0;background:color-mix(in srgb,var(--surface) 72%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-color:color-mix(in srgb,var(--gold) 60%,transparent);font-weight:600}
 .close-bottom{position:sticky;bottom:calc(-24px - env(safe-area-inset-bottom));z-index:2;justify-self:center;width:min(260px,80%);margin:6px 0 calc(-12px - env(safe-area-inset-bottom));padding:10px 14px;border-radius:99px;font-weight:600;background:color-mix(in srgb,var(--surface) 72%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-color:color-mix(in srgb,var(--gold) 60%,transparent)}
+.splash{position:fixed;inset:0;z-index:50;background:radial-gradient(120% 80% at 50% 30%,#16845A,#062A1C);color:#fff;display:grid;place-items:center;padding:32px 28px calc(32px + env(safe-area-inset-bottom));text-align:center;transition:opacity .45s}
+.splash.out{opacity:0;pointer-events:none}
+.splash .in{display:grid;gap:16px;max-width:520px}
+.splash img{height:64px;justify-self:center;opacity:.9}
+.splash .sar{font-family:var(--arabic);font-size:26px;line-height:1.8;direction:rtl;color:#F1D98A}
+.splash .sfr{font-family:var(--display);font-size:25px;line-height:1.35;text-wrap:balance}
+.splash .sref{font-size:13px;opacity:.8}
+.splash .sbar{height:3px;background:rgba(241,217,138,.25);border-radius:2px;overflow:hidden;width:120px;justify-self:center}
+.splash .sbar i{display:block;height:100%;background:#F1D98A;animation:sb 2s linear forwards}
+@keyframes sb{from{width:0}to{width:100%}}
+@media (prefers-reduced-motion:reduce){.splash,.splash .sbar i{transition:none;animation:none}}
 details summary{cursor:pointer;font-weight:600}
 @media (prefers-reduced-motion:reduce){.sh .chev{transition:none}}
 @media (max-width:360px){.times div{font-size:10px}.times div b{font-size:13px}nav.bar a{font-size:10px}}
@@ -219,6 +230,7 @@ details summary{cursor:pointer;font-weight:600}
   <a href="#hadiths" data-v="hadiths"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h11l3 3v13H5z"/><path d="M8 10h8M8 14h8M8 18h5"/></svg>Hadiths</a>
 </nav>
 <div id="dlg"></div>
+<div class="splash" id="splash" role="dialog" aria-label="Hadith du moment"><div class="in" id="splashIn"></div></div>
 <script>
 "use strict";
 /* ---------- Réglages ---------- */
@@ -835,6 +847,18 @@ function vReglages(){
   document.getElementById("hsync").onclick=()=>{document.getElementById("hst").textContent="Vérification…";syncHijri(true).then(()=>{if(view==="reglages")vReglages()})};
 }
 
+/* ---------- Écran d'accueil : un hadith court ---------- */
+const ACCUEIL=[{"id":5348,"fr":"Ne méprise rien du bien, ne serait-ce que de rencontrer ton frère avec un visage souriant. \"","ar":"لا تحقرن من المعروف شيئا، ولو أن تلقى أخاك بوجه طلق","g":"[Authentique]","ref":"[Rapporté par Muslim]"},{"id":5346,"fr":"Tout acte de bien est une aumône.","ar":"كل معروف صدقة","g":"[Authentique]","ref":"[Rapporté par Al Bukhârî d'après le hadith de Jâbir et rapporté par Muslim d'après le hadith de Hudhayfah]"},{"id":5351,"fr":"Le fort n'est pas celui qui terrasse autrui, le fort, c'est celui qui maîtrise sa personne au moment de la colère.","ar":"ليس الشديد بالصرعة، إنما الشديد الذي يملك نفسه عند الغضب","g":"[Authentique]","ref":"[Rapporté par Al Bukhârî et Muslim]"},{"id":5354,"fr":"Quiconque indique un bien a la même récompense que celui qui l’accomplit","ar":"من دل على خير فله مثل أجر فاعله","g":"[Authentique]","ref":"[Rapporté par Muslim]"},{"id":5437,"fr":"Quiconque croit en Allah et au Jour Dernier, qu'il dise du bien ou qu'il se taise","ar":"من كان يؤمن بالله واليوم الآخر فليقل خيرا أو ليصمت","g":"[Authentique]","ref":"[Rapporté par Al Bukhârî et Muslim]"},{"id":5440,"fr":"Celui qui n’est pas miséricordieux, on ne lui fera pas miséricorde !","ar":"مَنْ لَا يَرْحَم لَا يُرْحَمُ!","g":"[Authentique]","ref":"[Rapporté par Al-Bukhârî et Muslim]"},{"id":5496,"fr":"L’invocation c'est l’adoration !","ar":"الدعاء هو العبادة","g":"[Authentique]","ref":"[Rapporté par Abû Dâwud, At-Tirmidhî, Ibn Mâjah et Ahmad]"},{"id":5866,"fr":"Facilitez et ne rendez pas difficile ! Annoncez de bonnes nouvelles et ne faites pas fuir !","ar":"يسروا ولا تعسروا، وبشروا ولا تنفروا","g":"[Authentique]","ref":"[Rapporté par Al Bukhârî et Muslim]"},{"id":65255,"fr":"De la perfection de l’Islam de l’homme : délaisser ce qui ne le regarde pas.","ar":"من حسن إسلام المرء تركه ما لا يعنيه","g":"[An-Nawawî (qu'Allah lui fasse miséricorde) a dit : \" Hadith bon. \"]","ref":"[Rapporté par At-Tirmidhî et d'autres]"},{"id":66511,"fr":"Les actes ne valent que par les intentions","ar":"إنما الأعمال بالنيات، وإنما لكل امرئ ما نوى","g":"[Authentique]","ref":"[Rapporté par les deux Imams du Hadith : Abû 'AbdiLlah Muhammad ibn Ismaël ibn Ibrâhîm ibn Al Mughîrah ibn Bardizbah Al Bukhârî et Abû Al Husayn Muslim ibn Al Hajjâj ibn Muslim Al Quchayrîyy An-Naysâbû]"},{"id":4309,"fr":"La religion, c’est la sincérité","ar":"الدين النصيحة","g":"[Authentique]","ref":"[Rapporté par Muslim]"},{"id":4308,"fr":"La bonté c'est le bon comportement. Quant au péché, c'est ce qui s'agite dans ta poitrine et que tu répugnerais que les gens apprennent.","ar":"البر حسن الخلق، والإثم ما حاك في صدرك، وكرهت أن يطلع عليه الناس","g":"[Authentique]","ref":"[Rapporté par Muslim]"},{"id":5507,"fr":"Deux paroles sont légères sur la langue, lourdes dans la Balance et aimées auprès du Tout-Miséricordieux","ar":"كلمتان خفيفتان على اللسان، ثقيلتان في الميزان، حبيبتان إلى الرحمن","g":"[Authentique]","ref":"[Rapporté par Al Bukhârî et Muslim]"},{"id":4568,"fr":"Chaque jour où le soleil se lève, la personne doit s’acquitter d’une aumône","ar":"كل سلامى من الناس عليه صدقة","g":"[Authentique]","ref":"[Rapporté par Al Bukhârî et Muslim]"},{"id":4302,"fr":"Crains Allah où que tu sois ! Fais suivre la mauvaise action par la bonne action, elle l’effacera ; et comporte-toi avec les gens d'un bon comportement.","ar":"اتق الله حيثما كنت، وأتبع السيئة الحسنة تمحها، وخالق الناس بخلق حسن","g":"[At-Tirmidhî a dit : \" Hadith bon. \"]","ref":"[Rapporté par At-Tirmidhî]"}];
+(function(){
+  const el=document.getElementById("splash"),inn=document.getElementById("splashIn");
+  let last=-1;try{last=+(localStorage.getItem("mq-last-hadith")||-1)}catch(e){}
+  let i=Math.floor(Math.random()*ACCUEIL.length);if(i===last)i=(i+1)%ACCUEIL.length;
+  try{localStorage.setItem("mq-last-hadith",i)}catch(e){}
+  const h=ACCUEIL[i],c=s=>String(s||"").replace(/[\[\]]/g,"").replace(/\s*"\s*$/,"");
+  inn.innerHTML=`<img src="icons/icon-192.png" alt=""><div class="sar">${esc(h.ar)}</div><div class="sfr">« ${esc(c(h.fr))} »</div><div class="sref">${esc(c(h.ref))} · ${esc(c(h.g))} · HadeethEnc n° ${h.id}</div><div class="sbar"><i></i></div>`;
+  const hide=()=>{el.classList.add("out");setTimeout(()=>el.remove(),500)};
+  el.onclick=hide;setTimeout(hide,2000);
+})();
 try{if("serviceWorker" in navigator&&location.protocol==="https:"&&!/claude\.ai|claudeusercontent/.test(location.hostname))navigator.serviceWorker.register("sw.js").catch(()=>{})}catch(e){}
 load("journee").then(d=>{J=d;route();syncHijri();setInterval(()=>syncHijri(),6*3600e3)}).catch(()=>{$app.innerHTML='<p class="loading">Les données n\'ont pas pu être chargées. Recharge la page.</p>'});
 </script>
