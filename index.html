@@ -210,7 +210,8 @@ select,input[type=time]{width:100%;max-width:100%;min-width:0;padding:9px 10px;b
 .splash .sfr{font-family:var(--display);font-size:25px;line-height:1.35;text-wrap:balance}
 .splash .sref{font-size:13px;opacity:.8}
 .splash .sbar{height:3px;background:rgba(241,217,138,.25);border-radius:2px;overflow:hidden;width:120px;justify-self:center}
-.splash .sbar i{display:block;height:100%;background:#F1D98A;animation:sb 2s linear forwards}
+.splash .sbar i{display:block;height:100%;width:0;background:#F1D98A}
+.splash.go .sbar i{animation:sb 3s linear forwards}
 @keyframes sb{from{width:0}to{width:100%}}
 @media (prefers-reduced-motion:reduce){.splash,.splash .sbar i{transition:none;animation:none}}
 details summary{cursor:pointer;font-weight:600}
@@ -856,8 +857,14 @@ const ACCUEIL=[{"id":5348,"fr":"Ne méprise rien du bien, ne serait-ce que de re
   try{localStorage.setItem("mq-last-hadith",i)}catch(e){}
   const h=ACCUEIL[i],c=s=>String(s||"").replace(/[\[\]]/g,"").replace(/\s*"\s*$/,"");
   inn.innerHTML=`<img src="icons/icon-192.png" alt=""><div class="sar">${esc(h.ar)}</div><div class="sfr">« ${esc(c(h.fr))} »</div><div class="sref">${esc(c(h.ref))} · ${esc(c(h.g))} · HadeethEnc n° ${h.id}</div><div class="sbar"><i></i></div>`;
-  const hide=()=>{el.classList.add("out");setTimeout(()=>el.remove(),500)};
-  el.onclick=hide;setTimeout(hide,2000);
+  const hide=()=>{if(el.classList.contains("out"))return;el.classList.add("out");setTimeout(()=>el.remove(),500)};
+  el.onclick=hide;
+  // Le compte de 3 secondes ne démarre qu'une fois le hadith réellement affiché à l'écran
+  let started=false;
+  const start=()=>{if(started||document.visibilityState!=="visible")return;started=true;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{el.classList.add("go");setTimeout(hide,3000)}))};
+  const ready=()=>{start();document.addEventListener("visibilitychange",start)};
+  Promise.race([document.fonts?document.fonts.ready:Promise.resolve(),new Promise(r=>setTimeout(r,1500))]).then(ready);
 })();
 try{if("serviceWorker" in navigator&&location.protocol==="https:"&&!/claude\.ai|claudeusercontent/.test(location.hostname))navigator.serviceWorker.register("sw.js").catch(()=>{})}catch(e){}
 load("journee").then(d=>{J=d;route();syncHijri();setInterval(()=>syncHijri(),6*3600e3)}).catch(()=>{$app.innerHTML='<p class="loading">Les données n\'ont pas pu être chargées. Recharge la page.</p>'});
