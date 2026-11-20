@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Musulman au quotidien</title>
 <meta name="theme-color" content="#0E6B47">
+<meta name="color-scheme" content="light dark">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -205,7 +206,7 @@ select,input[type=time]{width:100%;max-width:100%;min-width:0;padding:9px 10px;b
 .splash{position:fixed;inset:0;z-index:50;background:radial-gradient(120% 80% at 50% 30%,#16845A,#062A1C);color:#fff;display:grid;place-items:center;padding:32px 28px calc(32px + env(safe-area-inset-bottom));text-align:center;transition:opacity .45s}
 .splash.out{opacity:0;pointer-events:none}
 .splash .in{display:grid;gap:16px;max-width:520px}
-.splash img{height:64px;justify-self:center;opacity:.9}
+.splash img{height:96px;width:96px;justify-self:center;border-radius:22px;box-shadow:0 6px 24px rgba(0,0,0,.35),0 0 0 1px rgba(241,217,138,.35)}
 .splash .sar{font-family:var(--arabic);font-size:26px;line-height:1.8;direction:rtl;color:#F1D98A}
 .splash .sfr{font-family:var(--display);font-size:25px;line-height:1.35;text-wrap:balance}
 .splash .sref{font-size:13px;opacity:.8}
@@ -856,7 +857,7 @@ const ACCUEIL=[{"id":5348,"fr":"Ne méprise rien du bien, ne serait-ce que de re
   let i=Math.floor(Math.random()*ACCUEIL.length);if(i===last)i=(i+1)%ACCUEIL.length;
   try{localStorage.setItem("mq-last-hadith",i)}catch(e){}
   const h=ACCUEIL[i],c=s=>String(s||"").replace(/[\[\]]/g,"").replace(/\s*"\s*$/,"");
-  inn.innerHTML=`<img src="icons/icon-192.png" alt=""><div class="sar">${esc(h.ar)}</div><div class="sfr">« ${esc(c(h.fr))} »</div><div class="sref">${esc(c(h.ref))} · ${esc(c(h.g))} · HadeethEnc n° ${h.id}</div><div class="sbar"><i></i></div>`;
+  inn.innerHTML=`<img src="icons/icon-512.png" alt=""><div class="sar">${esc(h.ar)}</div><div class="sfr">« ${esc(c(h.fr))} »</div><div class="sref">${esc(c(h.ref))} · ${esc(c(h.g))} · HadeethEnc n° ${h.id}</div><div class="sbar"><i></i></div>`;
   const hide=()=>{if(el.classList.contains("out"))return;el.classList.add("out");setTimeout(()=>el.remove(),500)};
   el.onclick=hide;
   // Le compte de 3 secondes ne démarre qu'une fois le hadith réellement affiché à l'écran
