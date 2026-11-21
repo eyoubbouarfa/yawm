@@ -107,7 +107,9 @@ h1,h2,h3{font-family:var(--display);font-weight:400;text-wrap:balance;margin:0}
 .btog{justify-self:center;margin-top:4px;border:1px solid rgba(241,217,138,.45);background:rgba(0,0,0,.15);color:#F1D98A;border-radius:99px;padding:2px 12px;font-size:12px;font-weight:600}
 .band.closed .gear{top:6px;width:32px;height:32px}
 .step.lvl0 .sh{border:2px solid var(--gold);padding:9px 12px;grid-template-columns:54px 1fr auto;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 14%,var(--surface)),var(--surface));box-shadow:0 6px 18px -10px color-mix(in srgb,var(--accent) 60%,transparent)}
-.step.lvl0 .sh .ti{font-size:19px;color:var(--accent)}
+.step.lvl0 .sh .ti{font-family:var(--body);font-weight:700;font-size:19px;color:var(--accent)}
+.step.lvl0 .sh .tm,.step.lvl0 .sh .sub,.step.lvl0 .rg small{font-weight:700}
+.step.lvl0 .sbody .intro b,.step.lvl0 .sbody{font-weight:600}
 .step.lvl0 .sh .tm{font-size:16px}
 .step.lvl0 .sh .sub{font-size:12px}
 .step.lvl1 .sh .ti{font-size:15px}
@@ -294,6 +296,22 @@ let S={city:"Clermont-Ferrand",method:"uoif",asr:1,bed:"22:30",trad:"hamidullah"
 try{Object.assign(S,JSON.parse(localStorage.getItem("mq-settings")||"{}"))}catch(e){}
 function save(){try{localStorage.setItem("mq-settings",JSON.stringify(S))}catch(e){}}
 
+
+/* ---------- Position ---------- */
+function LL(){return S.loc&&isFinite(S.loc.lat)?[S.loc.lat,S.loc.lng]:(CITIES[S.city]||CITIES["Clermont-Ferrand"])}
+function placeName(){return S.loc&&S.loc.name?S.loc.name:S.city}
+function locate(){return new Promise((res,rej)=>{
+  if(!navigator.geolocation)return rej(new Error("Ce téléphone ne permet pas la localisation ici."));
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const lat=+pos.coords.latitude.toFixed(4),lng=+pos.coords.longitude.toFixed(4);let name="Ma position";
+    try{const r=await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=fr`);const j=await r.json();name=j.city||j.locality||j.principalSubdivision||name}catch(e){}
+    S.loc={name,lat,lng,src:"gps"};S.locAsked=1;save();res(S.loc);
+  },err=>rej(new Error(err.code===1?"Autorisation refusée. Tu peux l'activer dans les réglages du navigateur, ou choisir ta ville à la main.":"Position introuvable pour l'instant. Réessaie dehors ou choisis ta ville à la main.")),{enableHighAccuracy:false,timeout:15000,maximumAge:3600000});
+})}
+async function searchCity(q){
+  const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=fr&format=json`);
+  const j=await r.json();return (j.results||[]).map(x=>({name:x.name,detail:[x.admin1,x.country].filter(Boolean).join(", "),lat:+x.latitude.toFixed(4),lng:+x.longitude.toFixed(4)}));
+}
 /* ---------- Horaires de prière (calcul astronomique) ---------- */
 const rad=d=>d*Math.PI/180,deg=r=>r*180/Math.PI;
 const sin=d=>Math.sin(rad(d)),cos=d=>Math.cos(rad(d)),tan=d=>Math.tan(rad(d));
@@ -321,7 +339,7 @@ const hm=d=>d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
 
 /* Jour islamique : du Maghrib au Maghrib suivant */
 function islamicDay(now){
-  const [la,ln]=CITIES[S.city],m=METHODS[S.method];
+  const [la,ln]=LL(),m=METHODS[S.method];
   const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   const T0=prayerTimes(today,la,ln,m,S.asr);
   const start=now<T0.maghrib?new Date(today.getTime()-86400000):today;
@@ -410,13 +428,15 @@ function vChemin(){
   const nextCell=NP?(NP[2]==="fin"?"maghrib":NP[2]):null;
   const bOpen=!!S.bandOpen,sky=bOpen?(S.sky||"times"):"times";
   let h=`<header class="band ${bOpen?"":"closed"}">${GEAR}<img class="bm" src="img/minaret.svg" alt="">
-    ${bOpen?`<span class="eyebrow">Jour du ${esc(dateStr)} · ${esc(S.city)}</span>
+    ${bOpen?`<span class="eyebrow">Jour du ${esc(dateStr)} · ${esc(placeName())}</span>
     <h1>${esc(cur.n)}</h1><span class="meta">${NP?`Prochaine prière : <b>${esc(NP[0])}</b> à ${hm(NP[1])}, dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span>`:""}</span>
     <div class="skytabs" role="tablist">${[["times","Horaires"],["sun","Soleil"],["moon","Lune"]].map(([k,n])=>`<button class="${sky===k?"on":""}" data-sky="${k}">${n}</button>`).join("")}</div>`
-    :`<span class="bmini">${esc(cur.n)} · ${esc(S.city)}</span>`}
+    :`<span class="bmini">${esc(cur.n)} · ${esc(placeName())}</span>`}
     ${sky==="times"?`<div class="times">${tl.map(([n,t,k])=>`<div class="${k===nextCell?"next":""}">${n}<b>${hm(k===nextCell&&NP?NP[1]:t)}</b>${k===nextCell&&NP?`<i data-cd="${NP[1].getTime()}">${until(NP[1])}</i>`:""}</div>`).join("")}</div>`
       :(sky==="sun"?sunSVG(now):moonPanel(now))}
     <button class="btog" id="btog" aria-expanded="${bOpen}" aria-label="${bOpen?"Replier":"Déplier"} le bandeau">${bOpen?"Replier ▴":"Soleil, lune ▾"}</button></header>`;
+  if(!S.loc&&!S.locAsked)h+=`<div class="friday" id="askloc"><div><strong>Horaires exacts pour chez toi ?</strong> Autorise la localisation : elle reste sur le téléphone et sert seulement au calcul des horaires.</div>
+      <div class="row"><button class="btn primary" id="locyes">Me localiser</button><button class="btn" id="locno">Plus tard (${esc(S.city)})</button></div><p class="src" id="locmsg" style="margin:0"></p></div>`;
   if(D.friday){
     const fr=J.filter(x=>x.step==="vendredi");
     h+=`<div class="friday"><div><strong>Vendredi</strong> · du jeudi au Maghrib au vendredi au Maghrib. Lire la sourate Al-Kahf en entier, et retenir ses dix premiers versets.</div>
@@ -447,10 +467,12 @@ function vChemin(){
   const all=J.filter(x=>x.step==="journee");
   h+=`<div class="box"><h3>Tout au long de la journée</h3><div class="cards">${all.map(card).join("")}</div></div>
     <p class="src rkleg" style="margin-top:14px"><span class="rg fard"><span class="bars"><i></i></span></span> obligatoire <span class="rg sun"><span class="bars"><i></i></span></span> surérogatoire régulière <span class="rg opt"><span class="bars"><i></i></span></span> recommandée <span class="rg wit"><span class="bars"><i></i></span></span> Shaf' et Witr</p>
-    <p class="src" style="margin-top:6px">Horaires pour ${esc(S.city)}, méthode ${esc(METHODS[S.method].n)}. Bordure dorée : texte arabe du recueil d'origine. Bordure orange : référence encore à vérifier.</p>`;
+    <p class="src" style="margin-top:6px">Horaires pour ${esc(placeName())}, méthode ${esc(METHODS[S.method].n)}. Bordure dorée : texte arabe du recueil d'origine. Bordure orange : référence encore à vérifier.</p>`;
   $app.innerHTML=h;
   bindCards($app);
   $app.querySelectorAll("[data-sky]").forEach(e=>e.onclick=()=>{S.sky=e.dataset.sky;save();vChemin()});
+  const ly=document.getElementById("locyes");if(ly){ly.onclick=()=>{document.getElementById("locmsg").textContent="Localisation…";locate().then(()=>vChemin()).catch(e=>{document.getElementById("locmsg").textContent=e.message})};
+    document.getElementById("locno").onclick=()=>{S.locAsked=1;save();vChemin()}}
   document.getElementById("btog").onclick=()=>{S.bandOpen=!S.bandOpen;save();vChemin()};
   $app.querySelectorAll(".sh[aria-expanded]").forEach(b=>b.onclick=()=>{const s=b.parentElement,k=s.id.slice(3);s.classList.toggle("open");s.classList.contains("open")?OPEN.add(k):OPEN.delete(k);b.setAttribute("aria-expanded",s.classList.contains("open"));placeFill()});
   LASTCUR=cur.k;
@@ -567,7 +589,7 @@ function sunAlt(date,hours,lat,lng){
 }
 const hh0=t=>t.getHours()+t.getMinutes()/60;
 function sunSVG(now){
-  const [la,ln]=CITIES[S.city],day=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const [la,ln]=LL(),day=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   const P=prayerTimes(day,la,ln,METHODS[S.method],S.asr);
   const peak=Math.max(10,sunAlt(day,hh0(P.dhuhr),la,ln)),X=h=>10+h/24*340,Y=a=>a>0?58-a*(40/peak):58-Math.max(-40,a)*0.85;
   let d="";for(let m=0;m<=1440;m+=10){const h=m/60;d+=(m?"L":"M")+X(h).toFixed(1)+" "+Y(sunAlt(day,h,la,ln)).toFixed(1)}
@@ -611,7 +633,7 @@ function moonPanel(now){
 
 /* ---------- Jours blancs ---------- */
 function whiteDays(now){
-  const [la,ln]=CITIES[S.city],m=METHODS[S.method];
+  const [la,ln]=LL(),m=METHODS[S.method];
   const base=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   for(let i=-2;i<45;i++){
     const d=new Date(base.getFullYear(),base.getMonth(),base.getDate()+i),h=hijri(d);
@@ -646,7 +668,7 @@ const ICS_KINDS={
 function icsDate(d){return d.toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"")}
 function icsEsc(t){return String(t).replace(/\\/g,"\\\\").replace(/;/g,"\;").replace(/,/g,"\\,").replace(/\n/g,"\\n")}
 function buildICS(kind,nDays){
-  const [la,ln]=CITIES[S.city],m=METHODS[S.method],ev=[];
+  const [la,ln]=LL(),m=METHODS[S.method],ev=[];
   const add=(start,title,desc,min)=>ev.push([start,title,desc,min||10]);
   const t0=new Date();t0.setHours(0,0,0,0);
   const APRES="Après la prière : Ayat al-Kursî ; « Ô Allah, Tu es la Paix… » ; 33 Subhân Allah, 33 Al-hamdu lillah, 33 Allâhu akbar, puis « Lâ ilâha illa Allah wahdahu… » (Sahîh Muslim 597).";
@@ -938,7 +960,13 @@ function vReglages(){
   const T=islamicDay(new Date()).B;
   $app.innerHTML=`<div class="pagehead"><h1>Réglages</h1><p>Les horaires et la chronologie en dépendent.</p></div>
   <div class="box">
-    <label for="city">Ville<select id="city">${Object.keys(CITIES).map(c=>`<option ${c===S.city?"selected":""}>${c}</option>`).join("")}</select></label>
+    <h3>Ma position</h3>
+    <p style="margin:0"><b>${esc(placeName())}</b> <span class="src">(${LL()[0].toFixed(2)}, ${LL()[1].toFixed(2)})</span></p>
+    <div class="row"><button class="btn primary" id="geo">Me localiser</button></div>
+    <form class="row" id="cityf" style="flex-wrap:nowrap"><input class="search" id="cityq" type="text" placeholder="Ou chercher une ville" aria-label="Chercher une ville" autocomplete="off"><button class="btn" type="submit">Chercher</button></form>
+    <div class="cards" id="cityres"></div>
+    <p class="src" style="margin:0" id="geomsg">La position reste sur le téléphone : elle sert seulement à calculer les horaires.</p>
+    <label for="city">Ou une ville de la liste<select id="city"><option value="">—</option>${Object.keys(CITIES).map(c=>`<option ${!S.loc&&c===S.city?"selected":""}>${c}</option>`).join("")}</select></label>
     <label for="method">Méthode de calcul de Fajr et Isha<select id="method">${Object.entries(METHODS).map(([k,v])=>`<option value="${k}" ${k===S.method?"selected":""}>${v.n}</option>`).join("")}</select></label>
     <div class="grid2"><label for="asr">Asr<select id="asr"><option value="1" ${S.asr==1?"selected":""}>Majorité (ombre ×1)</option><option value="2" ${S.asr==2?"selected":""}>Hanafite (ombre ×2)</option></select></label>
     <label for="bed">Heure du coucher<input type="time" id="bed" value="${esc(S.bed)}"></label></div>
@@ -951,7 +979,7 @@ function vReglages(){
     <div class="row"><button class="btn" id="hsync">Vérifier maintenant</button></div>
     <p class="src" style="margin:0">Aucun organisme français ne publie ses annonces sous une forme que l'appli peut lire. Si ta mosquée annonce un autre jour, utilise la correction. Allah seul sait.</p></div>
   <div class="box"><h3>Rappels sur le téléphone</h3>
-    <p style="margin:0">Les rappels passent par l'agenda du téléphone : ils sonnent même appli fermée. Chaque fichier couvre les 60 prochains jours pour ${esc(S.city)} ; recrée-les tous les deux mois ou après un changement de ville.</p>
+    <p style="margin:0">Les rappels passent par l'agenda du téléphone : ils sonnent même appli fermée. Chaque fichier couvre les 60 prochains jours pour ${esc(placeName())} ; recrée-les tous les deux mois ou après un changement de ville.</p>
     <div class="cards">${Object.entries(ICS_KINDS).map(([k,v])=>`<button class="card" data-ics="${k}"><span class="t">Ajouter : ${esc(v.n)}</span><span class="r">${esc(v.d)}</span></button>`).join("")}</div>
     <p class="src" id="icsmsg" style="margin:0"></p></div>
   <div class="box"><h3>Sources et versions</h3>
@@ -960,7 +988,15 @@ function vReglages(){
     <p style="margin:0">Coran : traductions françaises de QuranEnc.com (Hamidullah révisée par le centre Rowwad, Rashid Maash, Montada Islamic Foundation). Texte arabe Uthmani Hafs du Complexe du Roi Fahd.</p>
     <p class="src" style="margin:0">Les textes sont affichés sans modification, conformément aux conditions des éditeurs. Pour signaler une erreur de traduction, s'adresser directement à HadeethEnc.com ou QuranEnc.com.</p>
   </div>`;
-  const up=()=>{S.city=city.value;S.method=method.value;S.asr=+asr.value;S.bed=bed.value||"22:30";save();vReglages()};
+  const up=()=>{if(city.value){S.city=city.value;S.loc=null}S.method=method.value;S.asr=+asr.value;S.bed=bed.value||"22:30";save();vReglages()};
+  const gm=t=>{const m=document.getElementById("geomsg");if(m)m.textContent=t};
+  document.getElementById("geo").onclick=()=>{gm("Localisation…");locate().then(()=>vReglages()).catch(e=>gm(e.message))};
+  document.getElementById("cityf").onsubmit=async e=>{e.preventDefault();const q=document.getElementById("cityq").value.trim();if(!q)return;gm("Recherche…");
+    try{const L=await searchCity(q);const box=document.getElementById("cityres");
+      box.innerHTML=L.length?L.map((x,i)=>`<button class="card" data-ci="${i}"><span class="t">${esc(x.name)}</span><span class="r">${esc(x.detail)}</span></button>`).join(""):"";
+      gm(L.length?"Touche ta ville.":"Aucune ville trouvée.");
+      box.querySelectorAll("[data-ci]").forEach(b=>b.onclick=()=>{const x=L[+b.dataset.ci];S.loc={name:x.name,lat:x.lat,lng:x.lng,src:"search"};S.locAsked=1;save();vReglages()});
+    }catch(err){gm("La recherche a besoin d'internet.")}};
   ["city","method","asr","bed"].forEach(id=>document.getElementById(id).onchange=up);
   $app.querySelectorAll("[data-ics]").forEach(b=>b.onclick=()=>downloadICS(b.dataset.ics));
   document.getElementById("hsrc").onchange=e=>{S.hsrc=e.target.value;save();syncHijri(true).then(()=>{if(view==="reglages")vReglages()});vReglages()};
