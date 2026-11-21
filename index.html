@@ -175,6 +175,12 @@ nav.bar svg{width:22px;height:22px}
 .steps span{width:28px;height:6px;border-radius:3px;background:var(--line)}
 .steps span.done{background:var(--gold)}
 label{font-weight:600;font-size:14px;display:grid;gap:4px}
+.ntab{display:grid;gap:4px}
+.ntab .nh,.ntab .nr{display:grid;grid-template-columns:1.1fr 1.2fr 1fr;gap:6px;align-items:center}
+.ntab .nh{font-size:12px;color:var(--muted);font-weight:600;padding:0 8px}
+.ntab .nr{background:var(--soft);border-radius:8px;padding:7px 8px;font-size:14px}
+.ntab .nr i{grid-column:1/-1;font-size:12px;color:var(--muted)}
+.ntab .nr.cur{background:color-mix(in srgb,var(--gold) 22%,var(--surface));outline:1px solid var(--gold)}
 .aw{font-style:italic;color:var(--gold);font-size:14px;margin:0}
 .fday{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
 .fday .d{font-weight:700;font-variant-numeric:tabular-nums;min-width:92px}
@@ -382,6 +388,7 @@ function vChemin(){
       <button class="sh" aria-expanded="${OPEN.has(p.k)}"><span class="tm">${hm(p.s)}</span><span class="ti">${esc(p.n)}${isNext?`<span class="nextb">prochaine · dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span></span>`:""}<span class="sub">${esc(subtitle||"Pas de pratique propre pour l'instant")}</span></span>${CHEV}</button>
       <div class="sbody">${p.intro?`<p class="intro">${esc(p.intro)}</p>`:""}
         ${items.length?`<div class="cards">${items.map(card).join("")}</div>`:""}
+        ${p.p&&SUNNA[p.k]?`<p class="intro"><b>Surérogatoires :</b> ${esc(SUNNA[p.k])}. <a href="#dhikr" data-nawafil>Détails</a></p>`:""}
         ${p.p?`<div class="row"><button class="btn primary" data-after>Après la prière</button><button class="btn gold" data-count="sunna">Compteur</button></div>`:""}
         ${p.k==="coucher"?`<div class="row"><button class="btn gold" data-count="coucher">Compteur 33 · 33 · 34</button></div>`:""}
       </div></div>`;
@@ -398,6 +405,7 @@ function vChemin(){
   $app.querySelectorAll(".sh[aria-expanded]").forEach(b=>b.onclick=()=>{const s=b.parentElement,k=s.id.slice(3);s.classList.toggle("open");s.classList.contains("open")?OPEN.add(k):OPEN.delete(k);b.setAttribute("aria-expanded",s.classList.contains("open"));placeFill()});
   LASTCUR=cur.k;
   $app.querySelectorAll("[data-after]").forEach(b=>b.onclick=openAfter);
+  $app.querySelectorAll("[data-nawafil]").forEach(b=>b.onclick=()=>{DSEG="nawafil"});
   $app.querySelectorAll("[data-count]").forEach(b=>b.onclick=()=>openCounter(b.dataset.count));
   $app.querySelectorAll("[data-sura]").forEach(b=>b.onclick=()=>{suraState={n:+b.dataset.sura,to:b.dataset.to?+b.dataset.to:null};location.hash="coran"});
   placeFill();
@@ -446,12 +454,30 @@ const COUNTERS={
   coucher:{t:"Avant de dormir",d:"33 Subhân Allah, 33 Al-hamdu lillah, 34 Allâhu akbar, enseignés par le Prophète à Fâtimah.",ref:"HadeethEnc n° 3139 (Al-Bukhârî et Muslim)",
     seq:[["سُبْحَانَ اللهِ","Subhân Allah",33],["الْحَمْدُ لِلّٰهِ","Al-hamdu lillah",33],["اللهُ أَكْبَرُ","Allâhu akbar",34]]},
 };
+let DSEG="dhikr";
+const SUNNA={maghrib:"2 unités avant (pour qui le veut) · 2 après",isha:"2 unités après",fajr:"2 unités avant, les plus appuyées",dhuhr:"4 unités avant (ou 2) · 2 après",asr:"4 unités avant (recommandées)"};
+async function vNawafil(){
+  const N=await load("nawafil"),D=islamicDay(new Date()),now=new Date();
+  const PR=[["Maghrib",D.A.maghrib],["Isha",D.A.isha],["Fajr",D.B.fajr],["Dhuhr",D.B.dhuhr],["Asr",D.B.asr]];
+  const np=(PR.find(x=>x[1]>now)||[""])[0];
+  let h=`<header class="band">${GEAR}<img class="bm" src="img/minaret.svg" alt=""><span class="eyebrow">Nawâfil</span><h1>Prières surérogatoires</h1><span class="meta">Ce que le Prophète priait en plus des cinq prières.</span></header>
+    <div class="row" style="margin-top:12px"><div class="seg"><button data-dseg="dhikr">Dhikr</button><button class="on" data-dseg="nawafil">Prières surérogatoires</button></div></div>
+    <div class="box"><h3>Autour des cinq prières</h3><div class="ntab"><div class="nh"><span>Prière</span><span>Avant</span><span>Après</span></div>
+    ${N.table.map(r=>`<div class="nr ${r[0]===np?"cur":""}"><b>${esc(r[0])}${r[0]===np?' <span class="pill cur">prochaine</span>':""}</b><span>${esc(r[1])}</span><span>${esc(r[2])}</span>${r[3]?`<i>${esc(r[3])}</i>`:""}</div>`).join("")}</div>
+    <p class="src" style="margin:0">Les douze unités régulières : 4 avant Dhuhr, 2 après, 2 après Maghrib, 2 après Isha, 2 avant Fajr (At-Tirmidhî 415, Muslim 728).</p></div>`;
+  N.sections.forEach((sec,si)=>{h+=`<div class="box"><h3>${esc(sec.t)}</h3><p style="margin:0">${esc(sec.intro)}</p><div class="cards">${listCards(sec.items,"nf"+si)}</div></div>`});
+  $app.innerHTML=h;
+  $app.querySelectorAll("[data-dseg]").forEach(b=>b.onclick=()=>{DSEG=b.dataset.dseg;vDhikr()});
+  N.sections.forEach((sec,si)=>$app.querySelectorAll(`[data-nf${si}]`).forEach(b=>b.onclick=()=>openItem(sec.items[+b.getAttribute("data-nf"+si)])));
+}
 function vDhikr(){
+  if(DSEG==="nawafil")return vNawafil();
   const c=k=>{const x=COUNTERS[k];return `<div class="dk ${k==="sunna"?"def":""}"><div class="row" style="justify-content:space-between"><h2>${esc(x.t)}</h2>${k==="sunna"?'<span class="pill gold">Par défaut</span>':""}</div>
     ${x.words?`<div class="words">${x.words.map(w=>`<span>${w}</span>`).join("")}</div>`:""}<p style="margin:0">${esc(x.d)}</p><p class="src" style="margin:0">${esc(x.ref)}</p>
     <button class="btn primary" data-count="${k}">Commencer</button></div>`};
-  $app.innerHTML=`<header class="band">${GEAR}<img class="bm" src="img/minaret.svg" alt=""><span class="eyebrow">Évocation d'Allah</span><h1>Dhikr</h1><span class="meta">Un compteur pour chaque moment.</span></header>${c("sunna")}${c("paroles")}${c("coucher")}`;
+  $app.innerHTML=`<header class="band">${GEAR}<img class="bm" src="img/minaret.svg" alt=""><span class="eyebrow">Évocation d'Allah</span><h1>Dhikr</h1><span class="meta">Un compteur pour chaque moment.</span></header><div class="row" style="margin-top:12px"><div class="seg"><button class="on" data-dseg="dhikr">Dhikr</button><button data-dseg="nawafil">Prières surérogatoires</button></div></div>${c("sunna")}${c("paroles")}${c("coucher")}`;
   $app.querySelectorAll("[data-count]").forEach(b=>b.onclick=()=>openCounter(b.dataset.count));
+  $app.querySelectorAll("[data-dseg]").forEach(b=>b.onclick=()=>{DSEG=b.dataset.dseg;vDhikr()});
 }
 function openCounter(kind){
   const C=COUNTERS[kind];
