@@ -175,6 +175,19 @@ nav.bar svg{width:22px;height:22px}
 .steps span{width:28px;height:6px;border-radius:3px;background:var(--line)}
 .steps span.done{background:var(--gold)}
 label{font-weight:600;font-size:14px;display:grid;gap:4px}
+.rk{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px;font-family:var(--body)}
+.rg{display:inline-flex;align-items:center;gap:4px}
+.rg .bars{display:inline-flex;gap:2px;align-items:flex-end}
+.rg .bars i{display:block;width:4px;height:14px;border-radius:2px}
+.rg small{font-size:11px;color:var(--muted);white-space:nowrap}
+.rg.fard .bars i{background:var(--accent)}
+.rg.sun .bars i{background:var(--gold)}
+.rg.opt .bars i{background:transparent;box-shadow:inset 0 0 0 1.5px var(--gold)}
+.rg.wit .bars i{background:#7F6BB3}
+.rg.wit .bars i{height:11px}
+.step.cur .rg .bars i{height:16px}
+.rkleg{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
+.rkleg .rg .bars i{height:11px}
 .ntab{display:grid;gap:4px}
 .ntab .nh,.ntab .nr{display:grid;grid-template-columns:1.1fr 1.2fr 1fr;gap:6px;align-items:center}
 .ntab .nh{font-size:12px;color:var(--muted);font-weight:600;padding:0 8px}
@@ -351,6 +364,19 @@ function sheet(html){
 }
 
 /* ---------- Chemin ---------- */
+/* Unités de prière : barres verticales (sunna avant · obligatoire · sunna après · Shaf' et Witr) */
+const RAKA={
+  maghrib:[["opt",2,"avant"],["fard",3,"Maghrib"],["sun",2,"après"]],
+  isha:[["fard",4,"Isha"],["sun",2,"après"],["wit",2,"Shaf'"],["wit",1,"Witr"]],
+  tiers:[["wit",2,"Shaf'"],["wit",1,"Witr"]],
+  fajr:[["sun",2,"avant"],["fard",2,"Fajr"]],
+  duha:[["sun",2,"Duhâ"]],
+  dhuhr:[["sun",4,"avant"],["fard",4,"Dhuhr"],["sun",2,"après"]],
+  asr:[["opt",4,"avant"],["fard",4,"Asr"]]
+};
+function rakaBars(k){const g=RAKA[k];if(!g)return "";
+  return `<span class="rk" aria-label="Unités de prière">${g.map(([t,n,l])=>`<span class="rg ${t}"><span class="bars">${"<i></i>".repeat(n)}</span><small>${n} ${esc(l)}</small></span>`).join("")}</span>`}
+
 function card(x){
   const i=J.indexOf(x),cls=x.src==="Externe"?"ext":x.src==="Collection"?"coll":"";
   const meta=x.src==="Externe"?`<span class="pill warn">À vérifier</span> ${esc(x.ref)}`
@@ -385,7 +411,7 @@ function vChemin(){
     const state=(i<D.cur?"past":i===D.cur?"cur":"")+(isNext?" next":"")+(OPEN.has(p.k)?" open":"");
     const subtitle=[items.length?items.length+" pratique"+(items.length>1?"s":""):"",p.p?"prière obligatoire":""].filter(Boolean).join(" · ");
     h+=`<div class="step ${state} ${p.p?"prayer":""}" id="st-${p.k}"><span class="dot"></span>
-      <button class="sh" aria-expanded="${OPEN.has(p.k)}"><span class="tm">${hm(p.s)}</span><span class="ti">${esc(p.n)}${isNext?`<span class="nextb">prochaine · dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span></span>`:""}<span class="sub">${esc(subtitle||"Pas de pratique propre pour l'instant")}</span></span>${CHEV}</button>
+      <button class="sh" aria-expanded="${OPEN.has(p.k)}"><span class="tm">${hm(p.s)}</span><span class="ti">${esc(p.n)}${isNext?`<span class="nextb">prochaine · dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span></span>`:""}<span class="sub">${esc(subtitle||"Pas de pratique propre pour l'instant")}</span>${rakaBars(p.k)}</span>${CHEV}</button>
       <div class="sbody">${p.intro?`<p class="intro">${esc(p.intro)}</p>`:""}
         ${items.length?`<div class="cards">${items.map(card).join("")}</div>`:""}
         ${p.p&&SUNNA[p.k]?`<p class="intro"><b>Surérogatoires :</b> ${esc(SUNNA[p.k])}. <a href="#dhikr" data-nawafil>Détails</a></p>`:""}
@@ -398,7 +424,8 @@ function vChemin(){
   h+=`<div class="step ${finNext?"next":""}" id="st-fin"><span class="dot"></span><div class="sh" style="cursor:default"><span class="tm">${hm(T.maghrib)}</span><span class="ti">Maghrib${finNext?`<span class="nextb">prochaine · dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span></span>`:""}<span class="sub">Un nouveau jour commence</span></span><span></span></div></div></div>`;
   const all=J.filter(x=>x.step==="journee");
   h+=`<div class="box"><h3>Tout au long de la journée</h3><div class="cards">${all.map(card).join("")}</div></div>
-    <p class="src" style="margin-top:16px">Horaires pour ${esc(S.city)}, méthode ${esc(METHODS[S.method].n)}. Bordure dorée : texte arabe du recueil d'origine. Bordure orange : référence encore à vérifier.</p>`;
+    <p class="src rkleg" style="margin-top:14px"><span class="rg fard"><span class="bars"><i></i></span></span> obligatoire <span class="rg sun"><span class="bars"><i></i></span></span> surérogatoire régulière <span class="rg opt"><span class="bars"><i></i></span></span> recommandée <span class="rg wit"><span class="bars"><i></i></span></span> Shaf' et Witr</p>
+    <p class="src" style="margin-top:6px">Horaires pour ${esc(S.city)}, méthode ${esc(METHODS[S.method].n)}. Bordure dorée : texte arabe du recueil d'origine. Bordure orange : référence encore à vérifier.</p>`;
   $app.innerHTML=h;
   bindCards($app);
   $app.querySelectorAll("[data-sky]").forEach(e=>e.onclick=()=>{S.sky=e.dataset.sky;save();vChemin()});
