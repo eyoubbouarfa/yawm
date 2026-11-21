@@ -205,6 +205,9 @@ label{font-weight:600;font-size:14px;display:grid;gap:4px}
 .step.cur .rg .bars i{height:16px}
 .rkleg{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
 .rkleg .rg .bars i{height:11px}
+.toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:60;width:min(92vw,520px);background:#0B4632;color:#fff;border:1px solid #F1D98A;border-radius:12px;padding:10px 14px;font-size:14px;line-height:1.4;box-shadow:0 10px 30px rgba(0,0,0,.35);transition:transform .35s}
+.toast.in{transform:translate(-50%,0)}
+.toast b{color:#F1D98A}
 .ntab{display:grid;gap:4px}
 .ntab .nh,.ntab .nr{display:grid;grid-template-columns:1.1fr 1.2fr 1fr;gap:6px;align-items:center}
 .ntab .nh{font-size:12px;color:var(--muted);font-weight:600;padding:0 8px}
@@ -308,6 +311,27 @@ function locate(){return new Promise((res,rej)=>{
     S.loc={name,lat,lng,src:"gps"};S.locAsked=1;save();res(S.loc);
   },err=>rej(new Error(err.code===1?"Autorisation refusée. Tu peux l'activer dans les réglages du navigateur, ou choisir ta ville à la main.":"Position introuvable pour l'instant. Réessaie dehors ou choisis ta ville à la main.")),{enableHighAccuracy:false,timeout:15000,maximumAge:3600000});
 })}
+function distKm(a,b){const R=6371,dl=rad(b.lat-a.lat),dg=rad(b.lng-a.lng),x=Math.sin(dl/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+function toast(html){
+  const show=()=>{let t=document.getElementById("toast");if(!t){t=document.createElement("div");t.id="toast";t.className="toast";t.setAttribute("role","status");document.body.appendChild(t)}
+    t.innerHTML=html;t.classList.add("in");t.onclick=()=>t.classList.remove("in");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("in"),6000)};
+  const wait=()=>{if(document.getElementById("splash"))setTimeout(wait,300);else show()};wait();
+}
+let LASTAUTO=0;
+function autoLocate(){
+  if(S.autoLoc===false||!navigator.geolocation||Date.now()-LASTAUTO<20*60000)return;LASTAUTO=Date.now();
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const np={lat:+pos.coords.latitude.toFixed(4),lng:+pos.coords.longitude.toFixed(4)};
+    const had=S.loc&&isFinite(S.loc.lat),prevName=placeName();
+    if(had&&distKm(S.loc,np)<8)return;
+    let name="Ma position";
+    try{const r=await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${np.lat}&longitude=${np.lng}&localityLanguage=fr`);const j=await r.json();name=j.city||j.locality||j.principalSubdivision||name}catch(e){}
+    S.loc={name,lat:np.lat,lng:np.lng,src:"auto"};save();
+    toast(had||prevName!==name?`<b>Tu t'es déplacé : ${esc(name)}.</b><br>Les horaires de prière sont mis à jour.`:`<b>Localisation : ${esc(name)}.</b><br>Horaires calculés pour ta position.`);
+    if(["chemin","reglages","jeune"].includes(view)&&!$dlg.innerHTML)route();
+  },err=>{if(err.code===1&&!S.locDeniedShown){S.locDeniedShown=1;save();toast(`Localisation non autorisée : horaires pour <b>${esc(placeName())}</b>.<br>Modifiable dans les Réglages.`)}},{enableHighAccuracy:false,timeout:15000,maximumAge:600000});
+}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")autoLocate()});
 async function searchCity(q){
   const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=fr&format=json`);
   const j=await r.json();return (j.results||[]).map(x=>({name:x.name,detail:[x.admin1,x.country].filter(Boolean).join(", "),lat:+x.latitude.toFixed(4),lng:+x.longitude.toFixed(4)}));
@@ -384,7 +408,7 @@ const GEAR=`<a class="gear" href="#reglages" aria-label="Réglages"><svg viewBox
 async function route(){
   const h=location.hash.slice(1);view=VIEWS.includes(h)?h:"chemin";
   document.querySelectorAll("nav.bar a").forEach(a=>a.setAttribute("aria-current",a.dataset.v===view?"page":"false"));closeDlg();
-  window.scrollTo(0,0);
+  window.scrollTo(0,0);if(view==="chemin")SCROLLNEXT=true;
   stopSpeak();try{({chemin:vChemin,dhikr:vDhikr,jeune:vJeune,apprendre:vApprendre,coran:vCoran,hadiths:vHadiths,reglages:vReglages})[view]()}
   catch(e){$app.innerHTML='<p class="loading">Les données n\'ont pas pu être chargées. Recharge la page.</p>'}
 }
@@ -435,8 +459,6 @@ function vChemin(){
     ${sky==="times"?`<div class="times">${tl.map(([n,t,k])=>`<div class="${k===nextCell?"next":""}">${n}<b>${hm(k===nextCell&&NP?NP[1]:t)}</b>${k===nextCell&&NP?`<i data-cd="${NP[1].getTime()}">${until(NP[1])}</i>`:""}</div>`).join("")}</div>`
       :(sky==="sun"?sunSVG(now):moonPanel(now))}
     <button class="btog" id="btog" aria-expanded="${bOpen}" aria-label="${bOpen?"Replier":"Déplier"} le bandeau">${bOpen?"Replier ▴":"Soleil, lune ▾"}</button></header>`;
-  if(!S.loc&&!S.locAsked)h+=`<div class="friday" id="askloc"><div><strong>Horaires exacts pour chez toi ?</strong> Autorise la localisation : elle reste sur le téléphone et sert seulement au calcul des horaires.</div>
-      <div class="row"><button class="btn primary" id="locyes">Me localiser</button><button class="btn" id="locno">Plus tard (${esc(S.city)})</button></div><p class="src" id="locmsg" style="margin:0"></p></div>`;
   if(D.friday){
     const fr=J.filter(x=>x.step==="vendredi");
     h+=`<div class="friday"><div><strong>Vendredi</strong> · du jeudi au Maghrib au vendredi au Maghrib. Lire la sourate Al-Kahf en entier, et retenir ses dix premiers versets.</div>
@@ -471,8 +493,6 @@ function vChemin(){
   $app.innerHTML=h;
   bindCards($app);
   $app.querySelectorAll("[data-sky]").forEach(e=>e.onclick=()=>{S.sky=e.dataset.sky;save();vChemin()});
-  const ly=document.getElementById("locyes");if(ly){ly.onclick=()=>{document.getElementById("locmsg").textContent="Localisation…";locate().then(()=>vChemin()).catch(e=>{document.getElementById("locmsg").textContent=e.message})};
-    document.getElementById("locno").onclick=()=>{S.locAsked=1;save();vChemin()}}
   document.getElementById("btog").onclick=()=>{S.bandOpen=!S.bandOpen;save();vChemin()};
   $app.querySelectorAll(".sh[aria-expanded]").forEach(b=>b.onclick=()=>{const s=b.parentElement,k=s.id.slice(3);s.classList.toggle("open");s.classList.contains("open")?OPEN.add(k):OPEN.delete(k);b.setAttribute("aria-expanded",s.classList.contains("open"));placeFill()});
   LASTCUR=cur.k;
@@ -481,7 +501,9 @@ function vChemin(){
   $app.querySelectorAll("[data-count]").forEach(b=>b.onclick=()=>openCounter(b.dataset.count));
   $app.querySelectorAll("[data-sura]").forEach(b=>b.onclick=()=>{suraState={n:+b.dataset.sura,to:b.dataset.to?+b.dataset.to:null};location.hash="coran"});
   placeFill();
+  if(SCROLLNEXT){SCROLLNEXT=false;const t=document.querySelector(".step.lvl0");if(t)requestAnimationFrame(()=>{const y=t.getBoundingClientRect().top+window.scrollY-Math.max(80,window.innerHeight*0.28);window.scrollTo({top:Math.max(0,y)})})}
 }
+let SCROLLNEXT=true;
 const OPEN=new Set();let LASTCUR=null,LASTNP=undefined;
 function placeFill(){const n=document.getElementById("now"),f=document.getElementById("fill");if(n&&f)f.style.height=n.offsetTop+"px"}
 function until(t,bare){const m=Math.max(0,Math.round((t-new Date())/60000)),d=Math.floor(m/1440),h=Math.floor(m%1440/60),r=(d?d+" j "+h+" h "+String(m%60).padStart(2,"0"):h?h+" h "+String(m%60).padStart(2,"0"):m+" min");return r}
@@ -804,8 +826,9 @@ function speak(t){return new Promise(res=>{
 function stopSpeak(){TOKEN++;try{speechSynthesis.cancel()}catch(e){}document.querySelectorAll(".on[data-say]").forEach(e=>e.classList.remove("on"))}
 async function playSeq(els){
   stopSpeak();const my=++TOKEN;
-  for(const e of els){if(my!==TOKEN)return;e.classList.add("on");await speak(e.dataset.say);await new Promise(r=>setTimeout(r,250/SPEED));e.classList.remove("on")}
+  for(const e of els){if(my!==TOKEN)return;follow(e);e.classList.add("on");await speak(e.dataset.say);await new Promise(r=>setTimeout(r,SPEED<0.45?1100:250/SPEED));e.classList.remove("on")}
 }
+function follow(e){try{const r=e.getBoundingClientRect(),top=80,bottom=window.innerHeight-90;if(r.top<top||r.bottom>bottom)e.scrollIntoView({block:"center",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}catch(x){}}
 async function sayOne(e){stopSpeak();const my=++TOKEN;e.classList.add("on");await speak(e.dataset.say);if(my===TOKEN)e.classList.remove("on")}
 
 
@@ -839,7 +862,7 @@ function vApprendre(){
   const forms=join?[[L,"isolée"],[L+ZWJ,"début"],[ZWJ+L+ZWJ,"milieu"],[ZWJ+L,"fin"]]:[[L,"isolée"],[ZWJ+L,"fin (attachée)"]];
   const [w,wt]=WORDS[WSEL],cl=clusters(w);
   $app.innerHTML=`<header class="band">${GEAR}<img class="bm" src="img/minaret.svg" alt=""><span class="eyebrow">Alphabet arabe</span><h1>Apprendre à lire</h1><span class="meta">Chaque lettre s'allume pendant qu'elle est prononcée.</span></header>
-    <div class="row" style="margin-top:12px;justify-content:space-between"><div class="seg"><button class="${SPEED<0.7?"on":""}" data-sp="0.55">Lente</button><button class="${SPEED>=0.7?"on":""}" data-sp="0.85">Normale</button></div><button class="btn" id="stop">Arrêter</button></div>
+    <div class="row" style="margin-top:12px;justify-content:space-between"><div class="seg"><button class="${SPEED<0.45?"on":""}" data-sp="0.3">Lent ++</button><button class="${SPEED>=0.45&&SPEED<0.7?"on":""}" data-sp="0.55">Lente</button><button class="${SPEED>=0.7?"on":""}" data-sp="0.85">Normale</button></div><button class="btn" id="stop">Arrêter</button></div>
     ${hasVoice?"":`<div class="box" style="margin-top:10px"><p style="margin:0">La voix arabe n'est pas détectée ici.</p><p style="margin:0">Si l'appli est ouverte <b>dans l'application Claude</b>, la voix ne peut pas fonctionner : ouvre le lien dans <b>Chrome</b> (ou Safari sur iPhone), ou l'appli installée.</p><p class="src" style="margin:0">Si la voix arabe n'est pas installée : Android › Text-to-speech › moteur Google › Install voice data › Arabic. iPhone › Accessibility › Spoken Content › Voices › Arabic.</p><div class="row"><button class="btn primary" id="testv">Tester le son</button></div></div>`}
     <div class="box"><h3>Du français à l'arabe</h3>
       <form class="row" id="trf" style="flex-wrap:nowrap"><input class="search" id="trq" type="text" placeholder="Un mot ou une phrase en français" aria-label="Mot ou phrase en français" value="${esc(TR.q)}" autocomplete="off"><button class="btn primary" type="submit">Traduire</button></form>
@@ -965,7 +988,8 @@ function vReglages(){
     <div class="row"><button class="btn primary" id="geo">Me localiser</button></div>
     <form class="row" id="cityf" style="flex-wrap:nowrap"><input class="search" id="cityq" type="text" placeholder="Ou chercher une ville" aria-label="Chercher une ville" autocomplete="off"><button class="btn" type="submit">Chercher</button></form>
     <div class="cards" id="cityres"></div>
-    <p class="src" style="margin:0" id="geomsg">La position reste sur le téléphone : elle sert seulement à calculer les horaires.</p>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="autoloc" ${S.autoLoc===false?"":"checked"}> Mettre à jour ma position automatiquement</label>
+    <p class="src" style="margin:0" id="geomsg">À chaque ouverture, si tu as changé de ville, l'appli le signale et recalcule les horaires. La position reste sur le téléphone.</p>
     <label for="city">Ou une ville de la liste<select id="city"><option value="">—</option>${Object.keys(CITIES).map(c=>`<option ${!S.loc&&c===S.city?"selected":""}>${c}</option>`).join("")}</select></label>
     <label for="method">Méthode de calcul de Fajr et Isha<select id="method">${Object.entries(METHODS).map(([k,v])=>`<option value="${k}" ${k===S.method?"selected":""}>${v.n}</option>`).join("")}</select></label>
     <div class="grid2"><label for="asr">Asr<select id="asr"><option value="1" ${S.asr==1?"selected":""}>Majorité (ombre ×1)</option><option value="2" ${S.asr==2?"selected":""}>Hanafite (ombre ×2)</option></select></label>
@@ -988,14 +1012,15 @@ function vReglages(){
     <p style="margin:0">Coran : traductions françaises de QuranEnc.com (Hamidullah révisée par le centre Rowwad, Rashid Maash, Montada Islamic Foundation). Texte arabe Uthmani Hafs du Complexe du Roi Fahd.</p>
     <p class="src" style="margin:0">Les textes sont affichés sans modification, conformément aux conditions des éditeurs. Pour signaler une erreur de traduction, s'adresser directement à HadeethEnc.com ou QuranEnc.com.</p>
   </div>`;
-  const up=()=>{if(city.value){S.city=city.value;S.loc=null}S.method=method.value;S.asr=+asr.value;S.bed=bed.value||"22:30";save();vReglages()};
+  const up=()=>{if(city.value){S.city=city.value;S.loc=null;S.autoLoc=false}S.method=method.value;S.asr=+asr.value;S.bed=bed.value||"22:30";save();vReglages()};
   const gm=t=>{const m=document.getElementById("geomsg");if(m)m.textContent=t};
-  document.getElementById("geo").onclick=()=>{gm("Localisation…");locate().then(()=>vReglages()).catch(e=>gm(e.message))};
+  document.getElementById("autoloc").onchange=e=>{S.autoLoc=e.target.checked;save();if(S.autoLoc){LASTAUTO=0;autoLocate()}};
+  document.getElementById("geo").onclick=()=>{gm("Localisation…");S.autoLoc=true;locate().then(()=>vReglages()).catch(e=>gm(e.message))};
   document.getElementById("cityf").onsubmit=async e=>{e.preventDefault();const q=document.getElementById("cityq").value.trim();if(!q)return;gm("Recherche…");
     try{const L=await searchCity(q);const box=document.getElementById("cityres");
       box.innerHTML=L.length?L.map((x,i)=>`<button class="card" data-ci="${i}"><span class="t">${esc(x.name)}</span><span class="r">${esc(x.detail)}</span></button>`).join(""):"";
       gm(L.length?"Touche ta ville.":"Aucune ville trouvée.");
-      box.querySelectorAll("[data-ci]").forEach(b=>b.onclick=()=>{const x=L[+b.dataset.ci];S.loc={name:x.name,lat:x.lat,lng:x.lng,src:"search"};S.locAsked=1;save();vReglages()});
+      box.querySelectorAll("[data-ci]").forEach(b=>b.onclick=()=>{const x=L[+b.dataset.ci];S.loc={name:x.name,lat:x.lat,lng:x.lng,src:"search"};S.autoLoc=false;save();vReglages()});
     }catch(err){gm("La recherche a besoin d'internet.")}};
   ["city","method","asr","bed"].forEach(id=>document.getElementById(id).onchange=up);
   $app.querySelectorAll("[data-ics]").forEach(b=>b.onclick=()=>downloadICS(b.dataset.ics));
@@ -1027,7 +1052,7 @@ const ACCUEIL=[{"id":5348,"fr":"Ne méprise rien du bien, ne serait-ce que de re
   Promise.race([document.fonts?document.fonts.ready:Promise.resolve(),new Promise(r=>setTimeout(r,1500))]).then(ready);
 })();
 try{if("serviceWorker" in navigator&&location.protocol==="https:"&&!/claude\.ai|claudeusercontent/.test(location.hostname))navigator.serviceWorker.register("sw.js").catch(()=>{})}catch(e){}
-load("journee").then(d=>{J=d;route();syncHijri();setInterval(()=>syncHijri(),6*3600e3)}).catch(()=>{$app.innerHTML='<p class="loading">Les données n\'ont pas pu être chargées. Recharge la page.</p>'});
+load("journee").then(d=>{J=d;route();syncHijri();autoLocate();setInterval(()=>syncHijri(),6*3600e3)}).catch(()=>{$app.innerHTML='<p class="loading">Les données n\'ont pas pu être chargées. Recharge la page.</p>'});
 </script>
 </body>
 </html>
