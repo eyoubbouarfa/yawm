@@ -506,7 +506,7 @@ function vChemin(){
   $app.querySelectorAll("[data-count]").forEach(b=>b.onclick=()=>openCounter(b.dataset.count));
   $app.querySelectorAll("[data-sura]").forEach(b=>b.onclick=()=>{suraState={n:+b.dataset.sura,to:b.dataset.to?+b.dataset.to:null};location.hash="coran"});
   placeFill();
-  if(SCROLLNEXT){SCROLLNEXT=false;const t=document.querySelector(".step.lvl0");if(t)requestAnimationFrame(()=>{const y=t.getBoundingClientRect().top+window.scrollY-Math.max(80,window.innerHeight*0.28);window.scrollTo({top:Math.max(0,y)})})}
+  if(SCROLLNEXT){SCROLLNEXT=false;const t=document.querySelector(".step.lvl0");if(t)requestAnimationFrame(()=>{const h=t.querySelector(".sh")||t,r=h.getBoundingClientRect(),nav=document.querySelector("nav"),nb=nav?nav.offsetHeight:0,y=r.top+window.scrollY+r.height/2-(window.innerHeight-nb)/2;window.scrollTo({top:Math.max(0,y)})})}
 }
 let SCROLLNEXT=true;
 const OPEN=new Set();let LASTCUR=null,LASTNP=undefined;
