@@ -1,4 +1,4 @@
-const CACHE = "au-quotidien-v10";
+const CACHE = "au-quotidien-v11";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-180.png", "img/minaret.svg",
   "data/journee.json", "data/jeune.json", "data/alimentation.json", "data/sourates.json", "data/themes.json", "data/versions.json",
   "data/coran_ar.json", "data/coran_hamidullah.json", "data/coran_maash.json", "data/coran_montada.json", "data/hadiths.json"];
