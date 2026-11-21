@@ -214,15 +214,15 @@ select,input[type=time]{width:100%;max-width:100%;min-width:0;padding:9px 10px;b
 .splash .sbar i{display:block;height:100%;width:0;background:#F1D98A}
 .splash.go .sbar i{animation:sb 3s linear forwards}
 @keyframes sb{from{width:0}to{width:100%}}
-.splash .tap{position:absolute;right:26px;bottom:calc(110px + env(safe-area-inset-bottom));display:grid;justify-items:center;gap:6px;color:#F1D98A;font-size:12px;font-weight:600;opacity:0;animation:tapin .4s .6s forwards}
+.splash .tap{position:absolute;right:30px;bottom:calc(110px + env(safe-area-inset-bottom));display:grid;justify-items:center;gap:8px;color:#F1D98A;font-size:14px;letter-spacing:.04em;font-weight:600;opacity:0;animation:tapin .4s .6s forwards}
 .splash .tap .ring{position:relative;width:46px;height:46px;display:grid;place-items:center}
 .splash .tap .ring::before,.splash .tap .ring::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid #F1D98A;animation:ripple 1.4s ease-out infinite}
 .splash .tap .ring::after{animation-delay:.7s}
-.splash .tap svg{width:26px;height:26px;animation:press 1.4s ease-in-out infinite}
+.splash .tap .ring i{width:14px;height:14px;border-radius:50%;background:#F1D98A;animation:press 1.4s ease-in-out infinite}
 @keyframes ripple{from{transform:scale(.5);opacity:.9}to{transform:scale(1.5);opacity:0}}
-@keyframes press{0%,100%{transform:translateY(0)}45%{transform:translateY(3px) scale(.92)}}
+@keyframes press{0%,100%{transform:scale(1);opacity:.95}20%{transform:scale(.7);opacity:1}}
 @keyframes tapin{to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.splash .tap,.splash .tap .ring::before,.splash .tap .ring::after,.splash .tap svg{animation:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.splash .tap,.splash .tap .ring::before,.splash .tap .ring::after,.splash .tap .ring i{animation:none;opacity:1}}
 
 @media (prefers-reduced-motion:reduce){.splash,.splash .sbar i{transition:none;animation:none}}
 details summary{cursor:pointer;font-weight:600}
@@ -868,7 +868,7 @@ const ACCUEIL=[{"id":5348,"fr":"Ne méprise rien du bien, ne serait-ce que de re
   try{localStorage.setItem("mq-last-hadith",i)}catch(e){}
   const h=ACCUEIL[i],c=s=>String(s||"").replace(/[\[\]]/g,"").replace(/\s*"\s*$/,"");
   inn.innerHTML=`<img src="icons/icon-512.png" alt=""><div class="sar">${esc(h.ar)}</div><div class="sfr">« ${esc(c(h.fr))} »</div><div class="sref">${esc(c(h.ref))} · ${esc(c(h.g))} · HadeethEnc n° ${h.id}</div><div class="sbar"><i></i></div>`;
-  el.insertAdjacentHTML("beforeend",`<div class="tap" aria-hidden="true"><span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="#F1D98A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10"/><path d="M12 10V8.5a1.5 1.5 0 0 1 3 0V11"/><path d="M15 11v-1a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1-6 6h-.6a6 6 0 0 1-4.9-2.6L4.3 15a1.5 1.5 0 0 1 2.4-1.8L9 15"/></svg></span>Toucher pour passer</div>`);
+  el.insertAdjacentHTML("beforeend",`<div class="tap" aria-hidden="true"><span class="ring"><i></i></span>Passer</div>`);
   const hide=()=>{if(el.classList.contains("out"))return;el.classList.add("out");setTimeout(()=>el.remove(),500)};
   el.onclick=hide;
   // Le compte de 3 secondes ne démarre qu'une fois le hadith réellement affiché à l'écran
