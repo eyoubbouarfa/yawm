@@ -214,7 +214,9 @@ select,input[type=time]{width:100%;max-width:100%;min-width:0;padding:9px 10px;b
 .splash .sbar i{display:block;height:100%;width:0;background:#F1D98A}
 .splash.go .sbar i{animation:sb 3s linear forwards}
 @keyframes sb{from{width:0}to{width:100%}}
-.splash .tap{position:absolute;right:30px;bottom:calc(110px + env(safe-area-inset-bottom));display:grid;justify-items:center;gap:8px;color:#F1D98A;font-size:14px;letter-spacing:.04em;font-weight:600;opacity:0;animation:tapin .4s .6s forwards}
+.splash .tap{position:absolute;right:30px;bottom:calc(110px + env(safe-area-inset-bottom));display:grid;justify-items:center;gap:8px;color:#F1D98A;font-size:14px;letter-spacing:.04em;font-weight:600;opacity:0;transition:opacity .4s}
+.splash.done .tap{opacity:1}
+.splash.done .sbar{opacity:0;transition:opacity .4s}
 .splash .tap .ring{position:relative;width:46px;height:46px;display:grid;place-items:center}
 .splash .tap .ring::before,.splash .tap .ring::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid #F1D98A;animation:ripple 1.4s ease-out infinite}
 .splash .tap .ring::after{animation-delay:.7s}
@@ -870,11 +872,11 @@ const ACCUEIL=[{"id":5348,"fr":"Ne méprise rien du bien, ne serait-ce que de re
   inn.innerHTML=`<img src="icons/icon-512.png" alt=""><div class="sar">${esc(h.ar)}</div><div class="sfr">« ${esc(c(h.fr))} »</div><div class="sref">${esc(c(h.ref))} · ${esc(c(h.g))} · HadeethEnc n° ${h.id}</div><div class="sbar"><i></i></div>`;
   el.insertAdjacentHTML("beforeend",`<div class="tap" aria-hidden="true"><span class="ring"><i></i></span>Passer</div>`);
   const hide=()=>{if(el.classList.contains("out"))return;el.classList.add("out");setTimeout(()=>el.remove(),500)};
-  el.onclick=hide;
+  let canSkip=false;el.onclick=()=>{if(canSkip)hide()};
   // Le compte de 3 secondes ne démarre qu'une fois le hadith réellement affiché à l'écran
   let started=false;
   const start=()=>{if(started||document.visibilityState!=="visible")return;started=true;
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{el.classList.add("go");setTimeout(hide,3000)}))};
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{el.classList.add("go");setTimeout(()=>{canSkip=true;el.classList.add("done")},3000)}))};
   const ready=()=>{start();document.addEventListener("visibilitychange",start)};
   Promise.race([document.fonts?document.fonts.ready:Promise.resolve(),new Promise(r=>setTimeout(r,1500))]).then(ready);
 })();
