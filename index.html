@@ -506,8 +506,15 @@ function vChemin(){
   $app.querySelectorAll("[data-count]").forEach(b=>b.onclick=()=>openCounter(b.dataset.count));
   $app.querySelectorAll("[data-sura]").forEach(b=>b.onclick=()=>{suraState={n:+b.dataset.sura,to:b.dataset.to?+b.dataset.to:null};location.hash="coran"});
   placeFill();
-  if(SCROLLNEXT){SCROLLNEXT=false;const t=document.querySelector(".step.lvl0");if(t)requestAnimationFrame(()=>{const h=t.querySelector(".sh")||t,r=h.getBoundingClientRect(),nav=document.querySelector("nav"),nb=nav?nav.offsetHeight:0,y=r.top+window.scrollY+r.height/2-(window.innerHeight-nb)/2;window.scrollTo({top:Math.max(0,y)})})}
+  if(SCROLLNEXT){SCROLLNEXT=false;USERMOVED=false;centerNow();setTimeout(centerNow,350);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(centerNow)}
 }
+let USERMOVED=false,HIDDENAT=0;
+function centerNow(force){if(view!=="chemin"||(USERMOVED&&!force))return;const t=document.querySelector(".step.lvl0");if(!t)return;
+  requestAnimationFrame(()=>{const h=t.querySelector(".sh")||t,a=h.getBoundingClientRect(),n=document.getElementById("now"),b=n?n.getBoundingClientRect():a,
+    top=Math.min(a.top,b.top),bot=Math.max(a.bottom,b.bottom),nav=document.querySelector("nav"),nb=nav?nav.offsetHeight:0,
+    y=window.scrollY+(top+bot)/2-(window.innerHeight-nb)/2;window.scrollTo({top:Math.max(0,y)})})}
+["touchstart","wheel","keydown"].forEach(ev=>addEventListener(ev,()=>{if(!document.querySelector(".splash"))USERMOVED=true},{passive:true}));
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")HIDDENAT=Date.now();else if(HIDDENAT&&Date.now()-HIDDENAT>30000&&view==="chemin"){USERMOVED=false;route();}});
 let SCROLLNEXT=true;
 const OPEN=new Set();let LASTCUR=null,LASTNP=undefined;
 function placeFill(){const n=document.getElementById("now"),f=document.getElementById("fill"),r=document.getElementById("rest");if(n&&f){f.style.height=n.offsetTop+"px";if(r)r.style.top=(n.offsetTop+n.offsetHeight/2)+"px"}}
@@ -1047,7 +1054,7 @@ const ACCUEIL=[{"id":5348,"fr":"Ne méprise rien du bien, ne serait-ce que de re
   const h=ACCUEIL[i],c=s=>String(s||"").replace(/[\[\]]/g,"").replace(/\s*"\s*$/,"");
   inn.innerHTML=`<img src="icons/icon-512.png" alt=""><div class="sar">${esc(h.ar)}</div><div class="sfr ${c(h.fr).length>120?"long":""}">« ${esc(c(h.fr))} »</div><div class="sref">${esc(c(h.ref))} · ${esc(c(h.g))} · HadeethEnc n° ${h.id}</div><div class="sbar"><i></i></div>`;
   el.insertAdjacentHTML("beforeend",`<div class="tap" aria-hidden="true"><span class="ring"><i></i></span>Passer</div>`);
-  const hide=()=>{if(el.classList.contains("out"))return;el.classList.add("out");setTimeout(()=>el.remove(),500)};
+  const hide=()=>{if(el.classList.contains("out"))return;el.classList.add("out");USERMOVED=false;centerNow(true);setTimeout(()=>el.remove(),500)};
   let canSkip=false;el.onclick=()=>{if(canSkip)hide()};
   // Le compte de 3 secondes ne démarre qu'une fois le hadith réellement affiché à l'écran
   let started=false;
