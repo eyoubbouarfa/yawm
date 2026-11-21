@@ -191,8 +191,9 @@ label{font-weight:600;font-size:14px;display:grid;gap:4px}
 .forms small{font-family:var(--body);font-size:11px;color:var(--muted)}
 .syls{display:flex;flex-wrap:wrap;gap:6px;direction:rtl;justify-content:center}
 .syl{font-family:var(--arabic);font-size:32px;min-width:62px;text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:2px 8px}
-.word{display:flex;gap:0;direction:rtl;justify-content:center;font-family:var(--arabic);font-size:40px}
-.wl{border-radius:6px;padding:0 1px;border:1px solid transparent}
+.word{display:block;direction:rtl;text-align:center;font-family:var(--arabic);font-size:40px;line-height:1.9}
+.wl{transition:color .15s}
+.wl.on{background:none!important;color:var(--gold)!important;text-shadow:0 0 14px color-mix(in srgb,var(--gold) 60%,transparent)}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}
 .seg button{border:none;background:var(--surface);padding:6px 12px;font-size:14px}
 .seg button.on{background:var(--accent);color:var(--accent-ink)}
@@ -709,6 +710,22 @@ async function playSeq(els){
 }
 async function sayOne(e){stopSpeak();const my=++TOKEN;e.classList.add("on");await speak(e.dataset.say);if(my===TOKEN)e.classList.remove("on")}
 
+
+/* ---------- Traduction français → arabe ---------- */
+let TR={q:"",ar:"",err:"",busy:false};
+async function translateFr(q){
+  q=q.trim();if(!q)return;
+  TR={q,ar:"",err:"",busy:true};vApprendre();
+  try{
+    const r=await fetch("https://api.mymemory.translated.net/get?langpair=fr|ar&q="+encodeURIComponent(q),{cache:"no-store"});
+    const j=await r.json();
+    let ar=(j&&j.responseData&&j.responseData.translatedText)||"";
+    if(!/[\u0600-\u06FF]/.test(ar)){const m=(j.matches||[]).find(x=>/[\u0600-\u06FF]/.test(x.translation||""));ar=m?m.translation:""}
+    if(!ar)throw new Error("vide");
+    TR={q,ar:ar.trim(),err:"",busy:false};
+  }catch(e){TR={q,ar:"",err:navigator.onLine===false?"Pas de connexion internet : la traduction a besoin du réseau.":"La traduction n'a pas abouti. Réessaie dans un instant.",busy:false}}
+  if(view==="apprendre")vApprendre();
+}
 /* ---------- Apprendre à lire ---------- */
 const LETTERS=[["ا","alif","ألف",0],["ب","bâ'","باء",1],["ت","tâ'","تاء",1],["ث","thâ'","ثاء",1],["ج","jîm","جيم",1],["ح","hâ'","حاء",1],["خ","khâ'","خاء",1],["د","dâl","دال",0],["ذ","dhâl","ذال",0],["ر","râ'","راء",0],["ز","zây","زاي",0],["س","sîn","سين",1],["ش","shîn","شين",1],["ص","sâd","صاد",1],["ض","dâd","ضاد",1],["ط","tâ'","طاء",1],["ظ","zâ'","ظاء",1],["ع","'ayn","عين",1],["غ","ghayn","غين",1],["ف","fâ'","فاء",1],["ق","qâf","قاف",1],["ك","kâf","كاف",1],["ل","lâm","لام",1],["م","mîm","ميم",1],["ن","nûn","نون",1],["ه","hâ'","هاء",1],["و","wâw","واو",0],["ي","yâ'","ياء",1]];
 const WORDS=[["بَاب","porte"],["بَيْت","maison"],["قَلَم","stylo"],["كِتَاب","livre"],["شَمْس","soleil"],["قَمَر","lune"],["مَاء","eau"],["نُور","lumière"],["سَلَام","paix"],["صَلَاة","prière"],["صَوْم","jeûne"],["مَسْجِد","mosquée"]];
@@ -726,6 +743,14 @@ function vApprendre(){
   $app.innerHTML=`<header class="band">${GEAR}<img class="bm" src="img/minaret.svg" alt=""><span class="eyebrow">Alphabet arabe</span><h1>Apprendre à lire</h1><span class="meta">Chaque lettre s'allume pendant qu'elle est prononcée.</span></header>
     <div class="row" style="margin-top:12px;justify-content:space-between"><div class="seg"><button class="${SPEED<0.7?"on":""}" data-sp="0.55">Lente</button><button class="${SPEED>=0.7?"on":""}" data-sp="0.85">Normale</button></div><button class="btn" id="stop">Arrêter</button></div>
     ${hasVoice?"":`<div class="box" style="margin-top:10px"><p style="margin:0">La voix arabe n'est pas détectée ici.</p><p style="margin:0">Si l'appli est ouverte <b>dans l'application Claude</b>, la voix ne peut pas fonctionner : ouvre le lien dans <b>Chrome</b> (ou Safari sur iPhone), ou l'appli installée.</p><p class="src" style="margin:0">Si la voix arabe n'est pas installée : Android › Text-to-speech › moteur Google › Install voice data › Arabic. iPhone › Accessibility › Spoken Content › Voices › Arabic.</p><div class="row"><button class="btn primary" id="testv">Tester le son</button></div></div>`}
+    <div class="box"><h3>Du français à l'arabe</h3>
+      <form class="row" id="trf" style="flex-wrap:nowrap"><input class="search" id="trq" type="text" placeholder="Un mot ou une phrase en français" aria-label="Mot ou phrase en français" value="${esc(TR.q)}" autocomplete="off"><button class="btn primary" type="submit">Traduire</button></form>
+      ${TR.busy?'<p class="src" style="margin:0">Traduction…</p>':""}
+      ${TR.err?`<p class="src" style="margin:0">${esc(TR.err)}</p>`:""}
+      ${TR.ar?`<div class="word" id="trw">${clusters(TR.ar).map(c=>c===" "?" ":`<span class="wl" data-say="${esc(c)}">${esc(c)}</span>`).join("")}</div>
+        <div class="row" style="justify-content:center"><button class="btn primary" id="trl">Écouter</button><button class="btn gold" id="trs">Épeler puis lire</button></div>
+        <p class="src" style="margin:0">Traduction automatique (MyMemory), sans les voyelles courtes : utile pour le vocabulaire, à vérifier pour une phrase importante. Elle n'est jamais utilisée pour le Coran ni les hadiths.</p>`:""}
+    </div>
     <div class="box"><div class="row" style="justify-content:space-between"><h3>Les 28 lettres</h3><button class="btn primary" id="playAll">Lire l'alphabet</button></div>
       <div class="letters">${LETTERS.map((x,i)=>`<button class="lt ${i===LSEL?"sel":""}" data-li="${i}" data-say="${x[2]}"><span class="g">${x[0]}</span><span class="nm">${x[1]}</span></button>`).join("")}</div></div>
     <div class="box"><h3>La lettre ${esc(tr)} · <span style="font-family:var(--arabic)">${name}</span></h3>
@@ -741,6 +766,11 @@ function vApprendre(){
     <p class="src">Voix de synthèse du téléphone : utile pour reconnaître les lettres, mais elle ne remplace pas un enseignant pour la prononciation exacte. Elle n'est jamais utilisée pour réciter le Coran.</p>`;
   $app.querySelectorAll("[data-sp]").forEach(e=>e.onclick=()=>{SPEED=+e.dataset.sp;S.speed=SPEED;save();vApprendre()});
   document.getElementById("stop").onclick=stopSpeak;
+  document.getElementById("trf").onsubmit=e=>{e.preventDefault();stopSpeak();translateFr(document.getElementById("trq").value)};
+  if(TR.ar){const tEls=[...$app.querySelectorAll("#trw .wl[data-say]")];
+    document.getElementById("trl").onclick=async()=>{stopSpeak();const my=++TOKEN;tEls.forEach(e=>e.classList.add("on"));await speak(TR.ar);if(my===TOKEN)tEls.forEach(e=>e.classList.remove("on"))};
+    document.getElementById("trs").onclick=async()=>{await playSeq(tEls);const my=TOKEN;tEls.forEach(e=>e.classList.add("on"));await speak(TR.ar);if(my===TOKEN)tEls.forEach(e=>e.classList.remove("on"))};
+    tEls.forEach(e=>e.onclick=()=>sayOne(e));}
   const tv=document.getElementById("testv");if(tv)tv.onclick=()=>{speak("السلام عليكم");setTimeout(()=>{if(arVoice())vApprendre()},1500)};
   document.getElementById("playAll").onclick=()=>playSeq([...$app.querySelectorAll(".lt")]);
   $app.querySelectorAll(".lt").forEach(e=>e.onclick=()=>{LSEL=+e.dataset.li;vApprendre();sayOne($app.querySelector(`.lt[data-li="${LSEL}"]`))});
