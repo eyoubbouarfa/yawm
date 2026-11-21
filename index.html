@@ -455,7 +455,7 @@ const COUNTERS={
     seq:[["سُبْحَانَ اللهِ","Subhân Allah",33],["الْحَمْدُ لِلّٰهِ","Al-hamdu lillah",33],["اللهُ أَكْبَرُ","Allâhu akbar",34]]},
 };
 let DSEG="dhikr";
-const SUNNA={maghrib:"2 unités avant (pour qui le veut) · 2 après",isha:"2 unités après",fajr:"2 unités avant, les plus appuyées",dhuhr:"4 unités avant (ou 2) · 2 après",asr:"4 unités avant (recommandées)"};
+const SUNNA={maghrib:"2 unités avant (pour qui le veut) · 2 après",isha:"2 unités après · puis le Shaf' et le Witr, avant de dormir ou en fin de nuit",fajr:"2 unités avant, les plus appuyées",dhuhr:"4 unités avant (ou 2) · 2 après",asr:"4 unités avant (recommandées)"};
 async function vNawafil(){
   const N=await load("nawafil"),D=islamicDay(new Date()),now=new Date();
   const PR=[["Maghrib",D.A.maghrib],["Isha",D.A.isha],["Fajr",D.B.fajr],["Dhuhr",D.B.dhuhr],["Asr",D.B.asr]];
