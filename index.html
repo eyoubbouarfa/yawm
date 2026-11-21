@@ -208,6 +208,11 @@ label{font-weight:600;font-size:14px;display:grid;gap:4px}
 .toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:60;width:min(92vw,520px);background:#0B4632;color:#fff;border:1px solid #F1D98A;border-radius:12px;padding:10px 14px;font-size:14px;line-height:1.4;box-shadow:0 10px 30px rgba(0,0,0,.35);transition:transform .35s}
 .toast.in{transform:translate(-50%,0)}
 .toast b{color:#F1D98A}
+.tl .fill{background:var(--line)!important;opacity:.7}
+.tl .rest{position:absolute;left:9px;width:4px;bottom:8px;border-radius:2px;background:linear-gradient(var(--gold),color-mix(in srgb,var(--gold) 70%,var(--accent)))}
+.step.past{opacity:.42}
+.step.past .sh{box-shadow:none}
+.step.past .dot{background:var(--line);border-color:var(--line)}
 .ntab{display:grid;gap:4px}
 .ntab .nh,.ntab .nr{display:grid;grid-template-columns:1.1fr 1.2fr 1fr;gap:6px;align-items:center}
 .ntab .nh{font-size:12px;color:var(--muted);font-weight:600;padding:0 8px}
@@ -468,7 +473,7 @@ function vChemin(){
   const npKey=NP?NP[2]:null,iN=npKey==="fin"?st.length:st.findIndex(p=>p.k===npKey);
   if(npKey!==LASTNP){OPEN.clear();if(npKey&&npKey!=="fin")OPEN.add(npKey);LASTNP=npKey}
   const lvl=i=>iN<0?1:Math.abs(i-iN)===0?0:Math.abs(i-iN)===1?1:2;
-  h+=`<div class="tl" id="tl"><div class="fill" id="fill"></div>`;
+  h+=`<div class="tl" id="tl"><div class="fill" id="fill"></div><div class="rest" id="rest"></div>`;
   st.forEach((p,i)=>{
     const items=J.filter(x=>x.step===p.k);
     const isNext=NP&&NP[2]===p.k;
@@ -505,7 +510,7 @@ function vChemin(){
 }
 let SCROLLNEXT=true;
 const OPEN=new Set();let LASTCUR=null,LASTNP=undefined;
-function placeFill(){const n=document.getElementById("now"),f=document.getElementById("fill");if(n&&f)f.style.height=n.offsetTop+"px"}
+function placeFill(){const n=document.getElementById("now"),f=document.getElementById("fill"),r=document.getElementById("rest");if(n&&f){f.style.height=n.offsetTop+"px";if(r)r.style.top=(n.offsetTop+n.offsetHeight/2)+"px"}}
 function until(t,bare){const m=Math.max(0,Math.round((t-new Date())/60000)),d=Math.floor(m/1440),h=Math.floor(m%1440/60),r=(d?d+" j "+h+" h "+String(m%60).padStart(2,"0"):h?h+" h "+String(m%60).padStart(2,"0"):m+" min");return r}
 setInterval(()=>{
   document.querySelectorAll("[data-cd]").forEach(e=>e.textContent=until(new Date(+e.dataset.cd)));
