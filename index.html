@@ -215,6 +215,27 @@ label{font-weight:600;font-size:14px;display:grid;gap:4px}
 .step.past{opacity:.42}
 .step.past .sh{box-shadow:none}
 .step.past .dot{background:var(--line);border-color:var(--line)}
+.fh{font-family:var(--display);font-weight:400;font-size:20px;margin:22px 0 8px}
+.flist{display:grid;gap:8px}
+.fitem{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0}
+.fitem>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;font-weight:600}
+.fitem>summary::-webkit-details-marker{display:none}
+.fitem>summary::after{content:"▾";color:var(--muted);margin-left:4px}
+.fitem[open]>summary::after{content:"▴"}
+.fitem .ft{flex:1}
+.fitem .pill{white-space:nowrap;font-size:11px}
+.fbody{padding:0 14px 14px;border-top:1px solid var(--line)}
+.fbody h4{margin:12px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.ftab{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+.ftab>div{background:var(--soft);border-radius:10px;padding:8px 10px;display:grid;gap:2px}
+.ftab span{font-size:12px;color:var(--muted)}
+.ftab b{font-size:14px;font-weight:600}
+.fsrc{border-left:3px solid var(--gold);padding:4px 0 4px 10px;margin:8px 0}
+.fsrc .fref{font-size:12px;color:var(--muted);margin-bottom:4px}
+.fsrc .q-ar,.fsrc .ar{font-size:22px}
+.fintro .q-ar{font-size:22px;line-height:2}
+.fmore summary{font-size:13px;color:var(--accent);font-weight:600;margin:4px 0}
+.linkbtn{background:none;border:none;padding:4px 0;color:var(--accent);font-weight:600;font-size:13px;text-decoration:underline;cursor:pointer}
 .ntab{display:grid;gap:4px}
 .ntab .nh,.ntab .nr{display:grid;grid-template-columns:1.1fr 1.2fr 1fr;gap:6px;align-items:center}
 .ntab .nh{font-size:12px;color:var(--muted);font-weight:600;padding:0 8px}
@@ -488,7 +509,7 @@ function vChemin(){
       <div class="sbody">${p.intro?`<p class="intro">${esc(p.intro)}</p>`:""}
         ${items.length?`<div class="cards">${items.map(card).join("")}</div>`:""}
         ${p.p&&SUNNA[p.k]?`<p class="intro"><b>Surérogatoires :</b> ${esc(SUNNA[p.k])}. <a href="#dhikr" data-nawafil>Détails</a></p>`:""}
-        ${p.p?`<div class="row"><button class="btn primary" data-after>Après la prière</button><button class="btn gold" data-count="sunna">Compteur</button></div>`:""}
+        ${p.p?`<div class="row"><button class="btn primary" data-after>Après la prière</button><button class="btn gold" data-count="sunna">Compteur</button><button class="btn" data-howto>Comment prier</button></div>`:""}
         ${p.k==="coucher"?`<div class="row"><button class="btn gold" data-count="coucher">Compteur 33 · 33 · 34</button></div>`:""}
       </div></div>`;
     if(i===D.cur)h+=`<div class="now" id="now">Maintenant · ${hm(now)}<span></span></div>`;
@@ -506,6 +527,7 @@ function vChemin(){
   $app.querySelectorAll(".sh[aria-expanded]").forEach(b=>b.onclick=()=>{const s=b.parentElement,k=s.id.slice(3);s.classList.toggle("open");s.classList.contains("open")?OPEN.add(k):OPEN.delete(k);b.setAttribute("aria-expanded",s.classList.contains("open"));placeFill()});
   LASTCUR=cur.k;
   $app.querySelectorAll("[data-after]").forEach(b=>b.onclick=openAfter);
+  $app.querySelectorAll("[data-howto]").forEach(b=>b.onclick=()=>{ASEG="fiqh";FSEG="priere";location.hash="#apprendre"});
   $app.querySelectorAll("[data-nawafil]").forEach(b=>b.onclick=()=>{DSEG="nawafil"});
   $app.querySelectorAll("[data-count]").forEach(b=>b.onclick=()=>openCounter(b.dataset.count));
   $app.querySelectorAll("[data-sura]").forEach(b=>b.onclick=()=>{suraState={n:+b.dataset.sura,to:b.dataset.to?+b.dataset.to:null};location.hash="coran"});
@@ -869,7 +891,38 @@ const WORDS=[["بَاب","porte"],["بَيْت","maison"],["قَلَم","stylo"]
 let LSEL=1,WSEL=0;
 const ZWJ="‍";
 function clusters(w){const out=[];for(const ch of w){if(/[ً-ْٰ]/.test(ch)&&out.length)out[out.length-1]+=ch;else out.push(ch)}return out}
-function vApprendre(){
+
+let ASEG="lire",FSEG="ablutions";
+function asegRow(){return `<div class="row" style="margin-top:12px"><div class="seg"><button data-aseg="lire" class="${ASEG==="lire"?"on":""}">Lire l'arabe</button><button data-aseg="fiqh" class="${ASEG==="fiqh"?"on":""}">Ablutions et prière</button></div></div>`}
+function vApprendre(){if(ASEG==="fiqh")vFiqh();else vLire();$app.querySelectorAll("[data-aseg]").forEach(b=>b.onclick=()=>{ASEG=b.dataset.aseg;stopSpeak();vApprendre();window.scrollTo(0,0)})}
+function verseRef(r){const [a,b]=r.split(":").map(Number);return {a,b}}
+async function vFiqh(){
+  $app.innerHTML='<p class="loading">Chargement…</p>';
+  const [F,HD,SU,AR,FR]=await Promise.all([load("fiqh"),load("hadiths"),load("sourates"),load("coran_ar"),load("coran_hamidullah")]);
+  const byId={};HD.forEach(h=>byId[h.id]=h);
+  const verse=r=>{const {a,b}=verseRef(r);let off=0;for(let i=0;i<a-1;i++)off+=SU[i].v;return {ar:AR[off+b-1],fr:FR[off+b-1],nm:SU[a-1].tr}};
+  const D=F[FSEG];
+  const SCH=[["malikite","Malikites"],["hanafite","Hanafites"],["chaféite","Chaféites"],["hanbalite","Hanbalites"]];
+  const src=x=>{
+    if(x.q){const v=verse(x.q);return `<div class="fsrc"><div class="fref"><span class="pill gold">Coran</span> Sourate ${esc(v.nm)}, ${x.q}</div>${x.q===D.verset?`<p class="src" style="margin:0">Le verset est cité en haut de la page.</p>`:`<details class="fmore"><summary>Le verset en arabe et en français</summary><div class="q-ar">${esc(v.ar)}</div><div class="tr">${esc(v.fr)}</div><p class="src" style="margin:0">Traduction Hamidullah, révisée par le centre Rowwad (QuranEnc).</p></details>`}</div>`}
+    const h=byId[x.h];if(!h)return"";
+    return `<div class="fsrc"><div class="fref"><span class="pill ${gradeCls(h.g)}">${esc(clean(h.g))}</span> ${esc(clean(h.tk).split("\n")[0])}</div><div class="tr"><b>« ${esc(h.t)} »</b></div><details class="fmore"><summary>Le récit complet, en arabe et en français</summary><div class="ar">${nl(h.ar)}</div><div class="tr">${nl(h.fr)}</div></details><button class="linkbtn" data-oh="${h.id}">Explication du hadith n° ${h.id}</button></div>`};
+  const item=it=>{
+    const tag=it.a?`<span class="pill ok">Accord des écoles</span>`:(it.e?`<span class="pill gold">Divergence</span>`:"");
+    const tab=it.e?`<div class="ftab">${SCH.map(([k,n])=>`<div><span>${n}</span><b>${esc(it.e[k]||"")}</b></div>`).join("")}</div>`:"";
+    return `<details class="fitem"><summary><span class="ft">${esc(it.t)}</span>${tag}</summary><div class="fbody">${it.d?`<p>${esc(it.d)}</p>`:""}${tab}<h4>Sources</h4>${it.src.map(src).join("")}</div></details>`};
+  const v=verse(D.verset);
+  let h=`<header class="band">${GEAR}<img class="bm" src="img/minaret.svg" alt=""><span class="eyebrow">Selon le Coran et la Sunna</span><h1>Ablutions et prière</h1><span class="meta">Piliers et sunna, chacun avec sa source.</span></header>${asegRow()}
+    <div class="row" style="margin-top:8px"><div class="seg"><button data-fseg="ablutions" class="${FSEG==="ablutions"?"on":""}">Ablutions</button><button data-fseg="priere" class="${FSEG==="priere"?"on":""}">Prière</button></div></div>
+    <div class="box fintro" style="margin-top:12px"><p style="margin:0 0 8px">${esc(D.intro)}</p><div class="q-ar">${esc(v.ar)}</div><div class="tr">${esc(v.fr)}</div><p class="src" style="margin:0">Sourate ${esc(v.nm)}, ${D.verset} · traduction Hamidullah.</p></div>
+    <details class="box"><summary>Comment lire cette page</summary><p>${esc(F.legende)}</p>${F.termes.map(([a,b])=>`<p style="margin:4px 0"><b>${esc(a)}</b> : ${esc(b)}.</p>`).join("")}</details>`;
+  D.sections.forEach(sec=>{h+=`<h2 class="fh">${esc(sec.titre)}</h2><div class="flist">${sec.items.map(item).join("")}</div>`});
+  h+=`<p class="aw" style="margin-top:14px">Allah seul sait.</p><p class="src">Hadiths : HadeethEnc.com, traduction française et degrés d'authenticité. Positions des écoles selon leurs ouvrages de référence ; pour un cas précis, demande à l'imam.</p>`;
+  $app.innerHTML=h;
+  $app.querySelectorAll("[data-fseg]").forEach(b=>b.onclick=()=>{FSEG=b.dataset.fseg;vApprendre();window.scrollTo(0,0)});
+  $app.querySelectorAll("[data-oh]").forEach(b=>b.onclick=e=>{e.preventDefault();openHadith(+b.dataset.oh)});
+}
+function vLire(){
   const [L,tr,name,join]=LETTERS[LSEL];
   const b=L==="ا"?"أ":L,hasVoice=!!arVoice();
   const syl=[[b+"َ","fatha · a"],[(L==="ا"?"إ":L)+"ِ","kasra · i"],[b+"ُ","damma · ou"]];
@@ -877,7 +930,7 @@ function vApprendre(){
   syl.push([b+"ً","tanwîn · an"],[(L==="ا"?"إ":L)+"ٍ","tanwîn · in"],[b+"ٌ","tanwîn · oun"],[b+"َا","madd · â"],[(L==="ا"?"إ":L)+"ِي","madd · î"],[b+"ُو","madd · oû"]);
   const forms=join?[[L,"isolée"],[L+ZWJ,"début"],[ZWJ+L+ZWJ,"milieu"],[ZWJ+L,"fin"]]:[[L,"isolée"],[ZWJ+L,"fin (attachée)"]];
   const [w,wt]=WORDS[WSEL],cl=clusters(w);
-  $app.innerHTML=`<header class="band">${GEAR}<img class="bm" src="img/minaret.svg" alt=""><span class="eyebrow">Alphabet arabe</span><h1>Apprendre à lire</h1><span class="meta">Chaque lettre s'allume pendant qu'elle est prononcée.</span></header>
+  $app.innerHTML=`<header class="band">${GEAR}<img class="bm" src="img/minaret.svg" alt=""><span class="eyebrow">Alphabet arabe</span><h1>Apprendre à lire</h1><span class="meta">Chaque lettre s'allume pendant qu'elle est prononcée.</span></header>${asegRow()}
     <div class="row" style="margin-top:12px;justify-content:space-between"><div class="seg"><button class="${SPEED<0.45?"on":""}" data-sp="0.3">Lent ++</button><button class="${SPEED>=0.45&&SPEED<0.7?"on":""}" data-sp="0.55">Lente</button><button class="${SPEED>=0.7?"on":""}" data-sp="0.85">Normale</button></div><button class="btn" id="stop">Arrêter</button></div>
     ${hasVoice?"":`<div class="box" style="margin-top:10px"><p style="margin:0">La voix arabe n'est pas détectée ici.</p><p style="margin:0">Si l'appli est ouverte <b>dans l'application Claude</b>, la voix ne peut pas fonctionner : ouvre le lien dans <b>Chrome</b> (ou Safari sur iPhone), ou l'appli installée.</p><p class="src" style="margin:0">Si la voix arabe n'est pas installée : Android › Text-to-speech › moteur Google › Install voice data › Arabic. iPhone › Accessibility › Spoken Content › Voices › Arabic.</p><div class="row"><button class="btn primary" id="testv">Tester le son</button></div></div>`}
     <div class="box"><h3>Du français à l'arabe</h3>
