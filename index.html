@@ -441,14 +441,27 @@ const $app=document.getElementById("app"),$dlg=document.getElementById("dlg");
 let view="chemin";
 const VIEWS=["chemin","dhikr","jeune","apprendre","coran","hadiths","reglages"];
 const GEAR=`<a class="gear" href="#reglages" aria-label="Réglages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></a>`;
+
+/* ---------- Comptage anonyme (GoatCounter) ---------- */
+const GC="https://auquotidien.goatcounter.com/count";
+function gc(path,title,ev){try{if(!navigator.onLine)return false;
+  const q=new URLSearchParams({p:path,t:title||path,s:[screen.width,screen.height,devicePixelRatio||1].join(","),rnd:Math.random().toString(36).slice(2)});
+  if(ev)q.set("e","true");new Image().src=GC+"?"+q.toString();return true}catch(e){return false}}
+const STANDALONE=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+function gcStart(){
+  gc(STANDALONE?"/ouverture/appli-installee":"/ouverture/navigateur",STANDALONE?"Ouverture depuis l'icône":"Ouverture dans le navigateur");
+  try{if(!localStorage.getItem("mq-dev")&&gc("nouvel-appareil"+(STANDALONE?"-installe":"-navigateur"),"Nouvel appareil",true))localStorage.setItem("mq-dev","1")}catch(e){}
+}
+let GCV="";
 async function route(){
   const h=location.hash.slice(1);view=VIEWS.includes(h)?h:"chemin";
   document.querySelectorAll("nav.bar a").forEach(a=>a.setAttribute("aria-current",a.dataset.v===view?"page":"false"));closeDlg();
   window.scrollTo(0,0);if(view==="chemin")SCROLLNEXT=true;
+  if(GCV!==view){GCV=view;gc("/"+view,"Onglet "+view)}
   stopSpeak();try{({chemin:vChemin,dhikr:vDhikr,jeune:vJeune,apprendre:vApprendre,coran:vCoran,hadiths:vHadiths,reglages:vReglages})[view]()}
   catch(e){$app.innerHTML='<p class="loading">Les données n\'ont pas pu être chargées. Recharge la page.</p>'}
 }
-window.addEventListener("hashchange",route);
+window.addEventListener("hashchange",route);gcStart();
 function closeDlg(){$dlg.innerHTML=""}
 function sheet(html){
   $dlg.innerHTML=`<div class="dialog" role="dialog" aria-modal="true"><div class="sheet"><button class="btn close" data-close>Fermer</button>${html}<button class="btn close-bottom" data-close>Fermer</button></div></div>`;
@@ -546,7 +559,7 @@ function centerNow(force){if(view!=="chemin"||(USERMOVED&&!force))return;const t
     top=Math.min(a.top,b.top),bot=Math.max(a.bottom,b.bottom),nav=document.querySelector("nav"),nb=nav?nav.offsetHeight:0,
     y=window.scrollY+(top+bot)/2-(window.innerHeight-nb)/2;window.scrollTo({top:Math.max(0,y)})})}
 ["touchstart","wheel","keydown"].forEach(ev=>addEventListener(ev,()=>{if(!document.querySelector(".splash"))USERMOVED=true},{passive:true}));
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")HIDDENAT=Date.now();else if(HIDDENAT&&Date.now()-HIDDENAT>30000&&view==="chemin"){USERMOVED=false;route();}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")HIDDENAT=Date.now();else{if(HIDDENAT&&Date.now()-HIDDENAT>1800000)gcStart();if(HIDDENAT&&Date.now()-HIDDENAT>30000&&view==="chemin"){USERMOVED=false;route();}}});
 let SCROLLNEXT=true;
 const OPEN=new Set();let LASTCUR=null,LASTNP=undefined;
 function placeFill(){const n=document.getElementById("now"),f=document.getElementById("fill"),r=document.getElementById("rest");if(n&&f){f.style.height=n.offsetTop+"px";if(r)r.style.top=(n.offsetTop+n.offsetHeight/2)+"px"}}
@@ -1083,7 +1096,7 @@ function vReglages(){
     <p style="margin:0">Les rappels passent par l'agenda du téléphone : ils sonnent même appli fermée. Chaque fichier couvre les 60 prochains jours pour ${esc(placeName())} ; recrée-les tous les deux mois ou après un changement de ville.</p>
     <div class="cards">${Object.entries(ICS_KINDS).map(([k,v])=>`<button class="card" data-ics="${k}"><span class="t">Ajouter : ${esc(v.n)}</span><span class="r">${esc(v.d)}</span></button>`).join("")}</div>
     <p class="src" id="icsmsg" style="margin:0"></p></div>
-  <div class="box"><h3>Sources et versions</h3>
+  <div class="box"><h3>Comptage anonyme</h3><p style="margin:0">L'appli compte les ouvertures et les onglets consultés, de façon anonyme, avec GoatCounter : aucun nom, aucune position, aucun cookie, aucune adresse IP conservée. Ça permet seulement de savoir combien de personnes l'utilisent.</p></div><div class="box"><h3>Sources et versions</h3>
     <p style="margin:0">Hadiths traduits : encyclopédie HadeethEnc.com, français v1.17.0 (10 mai 2026), arabe v1.8.0.</p>
     <p style="margin:0">Textes arabes des recueils (Al-Bukhârî, Muslim, An-Nasâ'î) : éditions arabes publiées par le projet Hadith API.</p>
     <p style="margin:0">Coran : traductions françaises de QuranEnc.com (Hamidullah révisée par le centre Rowwad, Rashid Maash, Montada Islamic Foundation). Texte arabe Uthmani Hafs du Complexe du Roi Fahd.</p>
