@@ -1116,7 +1116,7 @@ function fPrep(){REC.handoff=false;if(S.chain!==false&&REC.n<114)fSrc(fNext(),RE
 async function fullPlay(){
   recStop();REC.mode="continu";REC.full=true;REC.i=0;recMark();
   if(S.annonce!==false&&document.visibilityState==="visible"){await announce(REC.n);if(!REC.full)return}
-  const el=fCur();if(el._n!==REC.n||!el.src)fSrc(el,REC.n);el.currentTime=0;el._want=true;
+  const el=fCur();if(el._n!==REC.n||!el.src)fSrc(el,REC.n);el.muted=false;el.currentTime=0;el._want=true;
   el.play().then(()=>{REC.on=true;recMark()}).catch(()=>{REC.on=false;recMark()});
   fMeta();fPrep();recMark()}
 async function fAdvance(already){
@@ -1129,8 +1129,10 @@ async function fAdvance(already){
   REC.fi=1-(REC.fi||0);fullPlay()}
 FA.forEach(el=>{
   el.addEventListener("timeupdate",()=>{if(el!==fCur()||!REC.full||REC.handoff||S.chain===false||REC.n>=114)return;
-    if(document.visibilityState==="hidden"&&el.duration&&el.duration-el.currentTime<0.45){REC.handoff=true;const nx=fNext();nx._want=true;nx.currentTime=0;nx.play().catch(()=>{})}});
-  el.addEventListener("ended",()=>{if(el!==fCur()||!REC.full)return;if(S.chain===false||REC.n>=114){recStop();return}fAdvance(!!REC.handoff)});
+    if(document.visibilityState==="hidden"&&el.duration&&el.duration-el.currentTime<4){REC.handoff=true;const nx=fNext();nx._want=true;nx.muted=true;nx.currentTime=0;nx.play().catch(()=>{})}});
+  el.addEventListener("ended",()=>{if(el!==fCur()||!REC.full)return;if(S.chain===false||REC.n>=114){recStop();return}
+    if(REC.handoff){const nx=fNext();try{nx.currentTime=0}catch(e){}nx.muted=false;if(nx.paused)nx.play().catch(()=>{})}
+    fAdvance(!!REC.handoff)});
 });
 const REC={a:new Audio(),n:0,off:0,cnt:0,i:-1,basm:false,on:false};
 REC.a.preload="auto";
@@ -1152,7 +1154,7 @@ function recPlay(i){
   if("mediaSession" in navigator){try{navigator.mediaSession.metadata=new MediaMetadata({title:`Sourate ${REC.n}, verset ${i+1}`,artist:(QARIS.find(q=>q[0]===(S.qari||"ar.alafasy"))||[0,""])[1],album:"Musulman au quotidien",artwork:[{src:"icons/icon-512.png",sizes:"512x512",type:"image/png"}]})}catch(e){}}
   recMark()}
 REC.a.onended=async()=>{if(REC.full)return;if(REC.basm){REC.basmDone=true;recPlay(REC.i)}else{REC.basmDone=true;if(REC.rep){recPlay(REC.i)}else recPlay(REC.i+1)}};
-function recStop(){try{speechSynthesis.cancel()}catch(e){}REC.a.pause();FA.forEach(x=>{x._want=false;x.pause()});REC.on=false;REC.i=-1;REC.basm=false;REC.basmDone=false;REC.full=false;recMark()}
+function recStop(){try{speechSynthesis.cancel()}catch(e){}REC.a.pause();FA.forEach(x=>{x._want=false;x.pause();x.muted=false});REC.on=false;REC.i=-1;REC.basm=false;REC.basmDone=false;REC.full=false;recMark()}
 function recToggle(){if(REC.full){const e=fCur();if(e.paused){e.play();REC.on=true}else{e.pause();REC.on=false}recMark();return}if(REC.i<0){REC.basmDone=false;recPlay(0)}else if(REC.a.paused){REC.a.play();REC.on=true;recMark()}else{REC.a.pause();REC.on=false;recMark()}}
 function recBar(){return `<div class="recbar" id="recbar"><button class="rb" data-r="prev" aria-label="Verset précédent">⏮</button><button class="rb rp" data-r="play" aria-label="Lecture">▶</button><button class="rb" data-r="next" aria-label="Verset suivant">⏭</button><span class="ri">Prêt</span><button class="rb rr" data-r="rep" aria-label="Répéter le verset" title="Répéter le verset">↻</button><button class="rb" data-r="stop" aria-label="Arrêter">■</button></div>`}
 
