@@ -221,6 +221,20 @@ label{font-weight:600;font-size:14px;display:grid;gap:4px}
 .fsteps>div{flex:1 1 0;min-width:0;display:grid;justify-items:center;gap:4px;text-align:center}
 .fsteps .fic{width:100%;max-width:56px;aspect-ratio:1;height:auto}.fsteps .fic svg{width:88%;height:88%}
 .fsteps small{font-size:11px;color:var(--muted);line-height:1.2}
+.inst{position:fixed;left:10px;right:10px;bottom:calc(66px + env(safe-area-inset-bottom));z-index:11;background:var(--surface);border:1.5px solid var(--gold);border-radius:18px;padding:14px 14px 12px;box-shadow:0 10px 30px rgba(0,0,0,.35);transform:translateY(140%);transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.inst.on{transform:none}
+.inst .x{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--muted);font-size:22px;line-height:1;padding:6px;cursor:pointer}
+.inst .it{display:flex;gap:10px;align-items:center;margin:0 26px 10px 0}
+.inst .it img{width:40px;height:40px;border-radius:10px}
+.inst .it b{font-family:var(--display);font-weight:400;font-size:17px;display:block}
+.inst .it small{color:var(--muted);font-size:12.5px}
+.inst .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.inst .st{background:var(--soft);border-radius:12px;padding:8px 6px;display:grid;justify-items:center;gap:4px;text-align:center;font-size:12px;line-height:1.25}
+.inst .st svg{width:30px;height:30px;color:var(--accent)}
+.inst .st i{font-style:normal;font-weight:700;color:var(--gold);font-size:11px}
+.inst .go{width:100%;margin-top:10px}
+.inst .arrow{display:block;margin:8px auto 0;width:26px;height:26px;color:var(--gold);animation:bob 1.2s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(5px)}}
 .fh{font-family:var(--display);font-weight:400;font-size:20px;margin:22px 0 8px}
 .flist{display:grid;gap:8px}
 .fitem{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0}
@@ -450,7 +464,34 @@ function gc(path,title,ev){try{if(!navigator.onLine)return false;
 const STANDALONE=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
 function gcStart(){
   gc(STANDALONE?"/ouverture/appli-installee":"/ouverture/navigateur",STANDALONE?"Ouverture depuis l'icône":"Ouverture dans le navigateur");
-  try{if(!localStorage.getItem("mq-dev")&&gc("nouvel-appareil"+(STANDALONE?"-installe":"-navigateur"),"Nouvel appareil",true))localStorage.setItem("mq-dev","1")}catch(e){}
+  try{if(!STANDALONE&&!localStorage.getItem("mq-dev")&&gc("nouvel-appareil-navigateur","Nouvel appareil",true))localStorage.setItem("mq-dev","1");if(STANDALONE&&!localStorage.getItem("mq-inst")&&gc("appli-installee","Téléphone avec l'appli installée",true))localStorage.setItem("mq-inst","1")}catch(e){}
+}
+
+/* ---------- Bandeau d'installation ---------- */
+let DEFER=null;
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();DEFER=e;const b=document.querySelector(".inst .go");if(b)b.hidden=false});
+addEventListener("appinstalled",()=>{gc("bandeau/installee","Installée depuis le bandeau",true);const el=document.querySelector(".inst");if(el)el.remove()});
+const SVGI={
+ share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>',
+ plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></svg>',
+ ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.8"/></svg>',
+ dots:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',
+ dl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M12 8v6M9.5 11.5L12 14l2.5-2.5"/></svg>',
+ down:'<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15M6 13l6 6 6-6"/></svg>'};
+function installBanner(){
+  if(STANDALONE||window.top!==window)return;
+  try{const t=+localStorage.getItem("mq-inst-later")||0;if(Date.now()-t<3*864e5)return}catch(e){}
+  const ua=navigator.userAgent,ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1),
+    iosOther=ios&&/CriOS|FxiOS|EdgiOS/.test(ua),st=(n,ic,t)=>`<div class="st">${SVGI[ic]}<i>${n}</i>${t}</div>`;
+  let steps;
+  if(ios)steps=st(1,"share",iosOther?"Touche <b>Partager</b> en haut à droite":"Touche <b>Partager</b> (ou <b>⋯</b> puis Partager)")+st(2,"plus","Choisis <b>Sur l'écran d'accueil</b>")+st(3,"ok","Touche <b>Ajouter</b>");
+  else steps=st(1,"dots","Touche les <b>3 points</b> du navigateur")+st(2,"dl","Choisis <b>Installer l'application</b>")+st(3,"ok","Confirme <b>Installer</b>");
+  const el=document.createElement("div");el.className="inst";el.setAttribute("role","dialog");
+  el.innerHTML=`<button class="x" aria-label="Plus tard">×</button><div class="it"><img src="icons/icon-192.png" alt=""><div><b>Installe l'appli sur ton téléphone</b><small>Une icône sur l'écran, plein écran, et ça marche sans internet.</small></div></div><div class="steps">${steps}</div>${ios&&!iosOther?SVGI.down:""}<button class="btn go" ${DEFER?"":"hidden"}>Installer l'appli</button>`;
+  document.body.appendChild(el);requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add("on")));
+  gc("bandeau/affiche"+(ios?"-iphone":"-android"),"Bandeau d'installation affiché",true);
+  el.querySelector(".x").onclick=()=>{try{localStorage.setItem("mq-inst-later",Date.now())}catch(e){}el.classList.remove("on");setTimeout(()=>el.remove(),500)};
+  el.querySelector(".go").onclick=async()=>{if(!DEFER)return;DEFER.prompt();const r=await DEFER.userChoice;DEFER=null;if(r&&r.outcome==="accepted"){gc("bandeau/installee","Installée depuis le bandeau",true);el.remove()}};
 }
 let GCV="";
 async function route(){
@@ -1132,7 +1173,7 @@ const ACCUEIL=[{"id":5348,"fr":"Ne méprise rien du bien, ne serait-ce que de re
   const h=ACCUEIL[i],c=s=>String(s||"").replace(/[\[\]]/g,"").replace(/\s*"\s*$/,"");
   inn.innerHTML=`<img src="icons/icon-512.png" alt=""><div class="sar">${esc(h.ar)}</div><div class="sfr ${c(h.fr).length>120?"long":""}">« ${esc(c(h.fr))} »</div><div class="sref">${esc(c(h.ref))} · ${esc(c(h.g))} · HadeethEnc n° ${h.id}</div><div class="sbar"><i></i></div>`;
   el.insertAdjacentHTML("beforeend",`<div class="tap" aria-hidden="true"><span class="ring"><i></i></span>Passer</div>`);
-  const hide=()=>{if(el.classList.contains("out"))return;el.classList.add("out");USERMOVED=false;centerNow(true);setTimeout(()=>el.remove(),500)};
+  const hide=()=>{if(el.classList.contains("out"))return;el.classList.add("out");setTimeout(installBanner,1800);USERMOVED=false;centerNow(true);setTimeout(()=>el.remove(),500)};
   let canSkip=false;el.onclick=()=>{if(canSkip)hide()};
   // Le compte de 3 secondes ne démarre qu'une fois le hadith réellement affiché à l'écran
   let started=false;
