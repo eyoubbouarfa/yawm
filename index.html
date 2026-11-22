@@ -239,6 +239,7 @@ label{font-weight:600;font-size:14px;display:grid;gap:4px}
 .recbar .rb{background:none;border:none;color:var(--ink);font-size:18px;width:40px;height:40px;border-radius:12px;cursor:pointer}
 .recbar .rp{background:var(--accent);color:var(--surface);font-size:16px}
 .recbar .rr.on{background:var(--soft);color:var(--gold)}
+.recbar.full .rr{visibility:hidden}
 .recbar .ri{flex:1;text-align:center;font-size:13px;color:var(--muted)}
 .verse .num{justify-self:start;background:var(--soft);border:none;color:var(--accent);font-weight:600;font-size:12px;border-radius:999px;padding:3px 10px;cursor:pointer}
 .verse.playing{background:color-mix(in srgb,var(--gold) 14%,var(--surface));border-color:var(--gold);box-shadow:0 0 0 1.5px var(--gold)}
@@ -1067,7 +1068,7 @@ async function renderSura(){
   const tn={hamidullah:"Hamidullah, révisée par le centre Rowwad (QuranEnc)",maash:"Rashid Maash (QuranEnc)",montada:"Montada Islamic Foundation (QuranEnc)"}[S.trad];
   let h=`<button class="back" id="bk">← Toutes les sourates</button><div class="pagehead"><h1>${s.n}. ${esc(s.tr)}</h1><p>${esc(s.fr)} · ${s.v} versets · révélée à ${esc(s.rev)}</p></div>
     <div class="row">${["hamidullah","maash","montada"].map(t=>`<button class="btn ${S.trad===t?"on":""}" data-t="${t}">${{hamidullah:"Hamidullah",maash:"Maash",montada:"Montada"}[t]}</button>`).join("")}</div>
-    <div class="box recbox"><h3>Écouter la récitation</h3><label class="src" for="qari">Récitateur</label><select id="qari">${QARIS.map(([k,n])=>`<option value="${k}" ${(S.qari||"ar.alafasy")===k?"selected":""}>${n}</option>`).join("")}</select><p class="src" style="margin:6px 0 0">Touche ▶ pour écouter toute la sourate, ou le numéro d'un verset pour partir de là. Le verset lu s'affiche en couleur. Demande une connexion internet.</p></div>`;
+    <div class="box recbox"><h3>Écouter la récitation</h3><label class="src" for="qari">Récitateur</label><select id="qari">${QARIS.map(([k,n])=>`<option value="${k}" ${(S.qari||"ar.alafasy")===k?"selected":""}>${n}</option>`).join("")}</select><div class="row" style="margin-top:10px;gap:8px"><button class="btn" data-mode="suivi">▶ Suivre le texte</button><button class="btn gold" data-mode="continu">🔒 Écoute continue</button></div><p class="src" style="margin:6px 0 0"><b>Suivre le texte</b> : le verset lu s'affiche en couleur, écran allumé. <b>Écoute continue</b> : toute la sourate d'un seul trait, même écran verrouillé. Demande une connexion internet.</p></div>`;
   if(s.mer)h+=`<div class="box"><h3>Mérites et moment</h3><p style="margin:0">${esc(s.mer)}</p><p class="aw">Allah seul sait.</p>${s.mom?`<p class="src" style="margin:0">Moment recommandé : ${esc(s.mom)}</p>`:""}</div>`;
   if(to)h+=`<p class="src">Versets 1 à ${cnt}. <button class="btn" id="allv">Afficher toute la sourate</button></p>`;
   h+=`<div class="list">`;
@@ -1076,10 +1077,11 @@ async function renderSura(){
   h+=recBar();
   $app.innerHTML=h;
   recStop();Object.assign(REC,{n,off,cnt});
-  document.getElementById("qari").onchange=e=>{S.qari=e.target.value;save();const i=REC.i;if(i>=0){REC.basmDone=true;recPlay(i)}};
+  document.getElementById("qari").onchange=e=>{S.qari=e.target.value;save();if(REC.full){fullPlay();return}const i=REC.i;if(i>=0){REC.basmDone=true;recPlay(i)}};
+  $app.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{if(b.dataset.mode==="continu")fullPlay();else{recStop();REC.basmDone=false;recPlay(0)}});
   $app.querySelectorAll("[data-pv]").forEach(b=>b.onclick=()=>{REC.basmDone=+b.dataset.pv>0;recPlay(+b.dataset.pv)});
   $app.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{const r=b.dataset.r;
-    if(r==="play")recToggle();else if(r==="stop")recStop();else if(r==="next"){REC.basmDone=true;recPlay(Math.max(0,REC.i+1))}else if(r==="prev"){REC.basmDone=true;recPlay(Math.max(0,REC.i-1))}
+    if(r==="play")recToggle();else if(r==="stop")recStop();else if(r==="next"){if(REC.full){REC.a.currentTime+=15;return}REC.basmDone=true;recPlay(Math.max(0,REC.i+1))}else if(r==="prev"){if(REC.full){REC.a.currentTime=Math.max(0,REC.a.currentTime-15);return}REC.basmDone=true;recPlay(Math.max(0,REC.i-1))}
     else if(r==="rep"){REC.rep=!REC.rep;b.classList.toggle("on",REC.rep)}});
   document.getElementById("bk").onclick=()=>{recStop();suraState=null;vCoran()};
   $app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{S.trad=b.dataset.t;save();renderSura()});
@@ -1090,15 +1092,30 @@ async function renderSura(){
 
 /* ---------- Récitation (audio en ligne, verset par verset) ---------- */
 const QARIS=[["ar.alafasy","Mishary Al-Afasy"],["ar.husary","Mahmoud Al-Husary"],["ar.minshawi","Al-Minshawi"],["ar.abdulbasitmurattal","Abdul Basit"],["ar.mahermuaiqly","Maher Al-Muaiqly"],["ar.abdurrahmaansudais","As-Sudais"]];
+const FULL={"ar.alafasy":["https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/","https://server8.mp3quran.net/afs/"],
+ "ar.husary":["https://download.quranicaudio.com/quran/mahmood_khaleel_al-husaree/","https://server13.mp3quran.net/husr/"],
+ "ar.minshawi":["https://download.quranicaudio.com/quran/muhammad_siddeeq_al-minshaawee/","https://server10.mp3quran.net/minsh/"],
+ "ar.abdulbasitmurattal":["https://download.quranicaudio.com/quran/abdul_basit_murattal/","https://server7.mp3quran.net/basit/"],
+ "ar.mahermuaiqly":["https://server12.mp3quran.net/maher/","https://download.quranicaudio.com/quran/maher_almu3aiqly/year1440/"],
+ "ar.abdurrahmaansudais":["https://download.quranicaudio.com/quran/abdurrahmaan_as-sudays/","https://server11.mp3quran.net/sds/"]};
+function fullPlay(){
+  recStop();REC.mode="continu";const list=FULL[S.qari||"ar.alafasy"]||FULL["ar.alafasy"],f=String(REC.n).padStart(3,"0")+".mp3";let k=0;
+  REC.a.onerror=()=>{k++;if(k<list.length){REC.a.src=list[k]+f;REC.a.play().catch(()=>{})}else{recStop();toast("La récitation demande une connexion internet.")}};
+  REC.a.src=list[0]+f;REC.i=0;REC.full=true;
+  REC.a.play().then(()=>{REC.on=true;recMark()}).catch(()=>{REC.on=false;recMark()});
+  if("mediaSession" in navigator){try{navigator.mediaSession.metadata=new MediaMetadata({title:`Sourate ${REC.n}`,artist:(QARIS.find(q=>q[0]===(S.qari||"ar.alafasy"))||[0,""])[1],album:"Musulman au quotidien",artwork:[{src:"icons/icon-512.png",sizes:"512x512",type:"image/png"}]})}catch(e){}}
+  recMark()}
 const REC={a:new Audio(),n:0,off:0,cnt:0,i:-1,basm:false,on:false};
 REC.a.preload="auto";
 function recUrl(g,br){return `https://cdn.islamic.network/quran/audio/${br||128}/${S.qari||"ar.alafasy"}/${g}.mp3`}
 function recMark(){document.querySelectorAll(".verse.playing").forEach(v=>v.classList.remove("playing"));
   const b=document.getElementById("recbar");if(!b)return;
-  b.querySelector(".rp").innerHTML=REC.on?"❚❚":"▶";b.querySelector(".ri").textContent=REC.i<0?"Prêt":(REC.basm?"Basmala":`Verset ${REC.i+1} / ${REC.cnt}`);
-  if(REC.i>=0&&!REC.basm){const v=document.querySelectorAll(".verse")[REC.i];if(v){v.classList.add("playing");const r=v.getBoundingClientRect();if(r.top<70||r.bottom>innerHeight-140)v.scrollIntoView({behavior:"smooth",block:"center"})}}}
+  b.querySelector(".rp").innerHTML=REC.on?"❚❚":"▶";b.querySelector(".ri").textContent=REC.i<0?"Prêt":(REC.full?"Sourate entière 🔒":(REC.basm?"Basmala":`Verset ${REC.i+1} / ${REC.cnt}`));
+  b.classList.toggle("full",!!REC.full);
+  if(REC.i>=0&&!REC.basm&&!REC.full){const v=document.querySelectorAll(".verse")[REC.i];if(v){v.classList.add("playing");const r=v.getBoundingClientRect();if(r.top<70||r.bottom>innerHeight-140)v.scrollIntoView({behavior:"smooth",block:"center"})}}}
 function recPlay(i){
   if(i>=REC.cnt||i<0){recStop();return}
+  REC.full=false;
   REC.i=i;const g=REC.off+i+1;
   REC.basm=(i===0&&REC.n!==1&&REC.n!==9&&!REC.basmDone);
   const src=REC.basm?1:g;let tried=128;
@@ -1107,8 +1124,8 @@ function recPlay(i){
   REC.a.play().then(()=>{REC.on=true;recMark()}).catch(()=>{REC.on=false;recMark()});
   if("mediaSession" in navigator){try{navigator.mediaSession.metadata=new MediaMetadata({title:`Sourate ${REC.n}, verset ${i+1}`,artist:(QARIS.find(q=>q[0]===(S.qari||"ar.alafasy"))||[0,""])[1],album:"Musulman au quotidien",artwork:[{src:"icons/icon-512.png",sizes:"512x512",type:"image/png"}]})}catch(e){}}
   recMark()}
-REC.a.onended=()=>{if(REC.basm){REC.basmDone=true;recPlay(REC.i)}else{REC.basmDone=true;if(REC.rep){recPlay(REC.i)}else recPlay(REC.i+1)}};
-function recStop(){REC.a.pause();REC.on=false;REC.i=-1;REC.basm=false;REC.basmDone=false;recMark()}
+REC.a.onended=()=>{if(REC.full){recStop();return}if(REC.basm){REC.basmDone=true;recPlay(REC.i)}else{REC.basmDone=true;if(REC.rep){recPlay(REC.i)}else recPlay(REC.i+1)}};
+function recStop(){REC.a.pause();REC.on=false;REC.i=-1;REC.basm=false;REC.basmDone=false;REC.full=false;recMark()}
 function recToggle(){if(REC.i<0){REC.basmDone=false;recPlay(0)}else if(REC.a.paused){REC.a.play();REC.on=true;recMark()}else{REC.a.pause();REC.on=false;recMark()}}
 function recBar(){return `<div class="recbar" id="recbar"><button class="rb" data-r="prev" aria-label="Verset précédent">⏮</button><button class="rb rp" data-r="play" aria-label="Lecture">▶</button><button class="rb" data-r="next" aria-label="Verset suivant">⏭</button><span class="ri">Prêt</span><button class="rb rr" data-r="rep" aria-label="Répéter le verset" title="Répéter le verset">↻</button><button class="rb" data-r="stop" aria-label="Arrêter">■</button></div>`}
 
