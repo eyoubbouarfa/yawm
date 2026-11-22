@@ -1069,7 +1069,7 @@ async function renderSura(){
   const tn={hamidullah:"Hamidullah, révisée par le centre Rowwad (QuranEnc)",maash:"Rashid Maash (QuranEnc)",montada:"Montada Islamic Foundation (QuranEnc)"}[S.trad];
   let h=`<button class="back" id="bk">← Toutes les sourates</button><div class="pagehead"><h1>${s.n}. ${esc(s.tr)}</h1><p>${esc(s.fr)} · ${s.v} versets · révélée à ${esc(s.rev)}</p></div>
     <div class="row">${["hamidullah","maash","montada"].map(t=>`<button class="btn ${S.trad===t?"on":""}" data-t="${t}">${{hamidullah:"Hamidullah",maash:"Maash",montada:"Montada"}[t]}</button>`).join("")}</div>
-    <div class="box recbox"><h3>Écouter la récitation</h3><label class="src" for="qari">Récitateur</label><select id="qari">${QARIS.map(([k,n])=>`<option value="${k}" ${(S.qari||"ar.alafasy")===k?"selected":""}>${n}</option>`).join("")}</select><div class="row" style="margin-top:10px;gap:8px"><button class="btn" data-mode="suivi">▶ Suivre le texte</button><button class="btn gold" data-mode="continu">🔒 Écoute continue</button></div><label class="chk"><input type="checkbox" id="chain" ${S.chain!==false?"checked":""}> Enchaîner les sourates suivantes</label><label class="chk"><input type="checkbox" id="annonce" ${S.annonce!==false?"checked":""}> Annoncer chaque sourate (numéro et nom en français et en arabe)</label><p class="src" style="margin:6px 0 0"><b>Suivre le texte</b> : le verset lu s'affiche en couleur, écran allumé. <b>Écoute continue</b> : toute la sourate d'un seul trait, même écran verrouillé. Demande une connexion internet.</p></div>`;
+    <div class="box recbox"><h3>Écouter la récitation</h3><label class="src" for="qari">Récitateur</label><select id="qari">${QARIS.map(([k,n])=>`<option value="${k}" ${(S.qari||"ar.alafasy")===k?"selected":""}>${n}</option>`).join("")}</select><div class="row" style="margin-top:10px;gap:8px"><button class="btn" data-mode="suivi">▶ Suivre le texte</button><button class="btn gold" data-mode="continu">🔒 Écoute continue</button></div><label class="chk"><input type="checkbox" id="chain" ${S.chain!==false?"checked":""}> Enchaîner les sourates suivantes</label><p class="src" style="margin:6px 0 0"><b>Suivre le texte</b> : le verset lu s'affiche en couleur, écran allumé. <b>Écoute continue</b> : toute la sourate d'un seul trait, même écran verrouillé. Demande une connexion internet.</p></div>`;
   if(s.mer)h+=`<div class="box"><h3>Mérites et moment</h3><p style="margin:0">${esc(s.mer)}</p><p class="aw">Allah seul sait.</p>${s.mom?`<p class="src" style="margin:0">Moment recommandé : ${esc(s.mom)}</p>`:""}</div>`;
   if(to)h+=`<p class="src">Versets 1 à ${cnt}. <button class="btn" id="allv">Afficher toute la sourate</button></p>`;
   h+=`<div class="list">`;
@@ -1079,7 +1079,7 @@ async function renderSura(){
   $app.innerHTML=h;
   if(!REC.keep)recStop();Object.assign(REC,{n,off,cnt});
   document.getElementById("qari").onchange=e=>{S.qari=e.target.value;save();if(REC.full){fullPlay();return}const i=REC.i;if(i>=0){REC.basmDone=true;recPlay(i)}};
-  document.getElementById("chain").onchange=e=>{S.chain=e.target.checked;save()};document.getElementById("annonce").onchange=e=>{S.annonce=e.target.checked;save()};
+  document.getElementById("chain").onchange=e=>{S.chain=e.target.checked;save()};
   $app.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{if(b.dataset.mode==="continu")fullPlay();else{recStop();REC.basmDone=false;recPlay(0)}});
   $app.querySelectorAll("[data-pv]").forEach(b=>b.onclick=()=>{REC.basmDone=+b.dataset.pv>0;recPlay(+b.dataset.pv)});
   $app.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{const r=b.dataset.r;
@@ -1100,11 +1100,6 @@ const FULL={"ar.alafasy":["https://download.quranicaudio.com/quran/mishaari_raas
  "ar.abdulbasitmurattal":["https://download.quranicaudio.com/quran/abdul_basit_murattal/","https://server7.mp3quran.net/basit/"],
  "ar.mahermuaiqly":["https://server12.mp3quran.net/maher/","https://download.quranicaudio.com/quran/maher_almu3aiqly/year1440/"],
  "ar.abdurrahmaansudais":["https://download.quranicaudio.com/quran/abdurrahmaan_as-sudays/","https://server11.mp3quran.net/sds/"]};
-function sayOne(t,lang,rate){return new Promise(res=>{try{const u=new SpeechSynthesisUtterance(t);u.lang=lang;const v=speechSynthesis.getVoices().find(x=>x.lang.toLowerCase().startsWith(lang.slice(0,2)));if(v)u.voice=v;u.rate=rate;
-  let d=false;const f=()=>{if(!d){d=true;res()}};u.onend=f;u.onerror=f;setTimeout(f,7000);speechSynthesis.speak(u)}catch(e){res()}})}
-async function announce(n){const SU=await load("sourates"),x=SU[n-1];
-  await sayOne(`Sourate ${n}. ${x.tr}, ${x.fr}.`,"fr-FR",0.95);if(!REC.full)return;
-  await new Promise(r=>setTimeout(r,350));await sayOne(`${x.ar.replace(/[\u064B-\u065F\u0670]/g,"")}، رقم ${n}`,"ar-SA",0.85)}
 const FA=[new Audio(),new Audio()];FA.forEach(x=>x.preload="auto");
 function fCur(){return FA[REC.fi||0]}function fNext(){return FA[1-(REC.fi||0)]}
 function fSrc(el,n){const list=FULL[S.qari||"ar.alafasy"]||FULL["ar.alafasy"],f=String(n).padStart(3,"0")+".mp3";let k=0;
@@ -1115,7 +1110,6 @@ function fMeta(){if("mediaSession" in navigator){try{navigator.mediaSession.meta
 function fPrep(){REC.handoff=false;if(S.chain!==false&&REC.n<114)fSrc(fNext(),REC.n+1)}
 async function fullPlay(){
   recStop();REC.mode="continu";REC.full=true;REC.i=0;recMark();
-  if(S.annonce!==false&&document.visibilityState==="visible"){await announce(REC.n);if(!REC.full)return}
   const el=fCur();if(el._n!==REC.n||!el.src)fSrc(el,REC.n);el.muted=false;el.currentTime=0;el._want=true;
   el.play().then(()=>{REC.on=true;recMark()}).catch(()=>{REC.on=false;recMark()});
   fMeta();fPrep();recMark()}
