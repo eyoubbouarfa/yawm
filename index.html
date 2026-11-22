@@ -1077,13 +1077,13 @@ async function renderSura(){
   h+=`</div><p class="src">Traduction : ${esc(tn)}. Texte arabe : Uthmani Hafs, Complexe du Roi Fahd.</p>`;
   h+=recBar();
   $app.innerHTML=h;
-  recStop();Object.assign(REC,{n,off,cnt});
+  if(!REC.keep)recStop();Object.assign(REC,{n,off,cnt});
   document.getElementById("qari").onchange=e=>{S.qari=e.target.value;save();if(REC.full){fullPlay();return}const i=REC.i;if(i>=0){REC.basmDone=true;recPlay(i)}};
   document.getElementById("chain").onchange=e=>{S.chain=e.target.checked;save()};document.getElementById("annonce").onchange=e=>{S.annonce=e.target.checked;save()};
   $app.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{if(b.dataset.mode==="continu")fullPlay();else{recStop();REC.basmDone=false;recPlay(0)}});
   $app.querySelectorAll("[data-pv]").forEach(b=>b.onclick=()=>{REC.basmDone=+b.dataset.pv>0;recPlay(+b.dataset.pv)});
   $app.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{const r=b.dataset.r;
-    if(r==="play")recToggle();else if(r==="stop")recStop();else if(r==="next"){if(REC.full){REC.a.currentTime+=15;return}REC.basmDone=true;recPlay(Math.max(0,REC.i+1))}else if(r==="prev"){if(REC.full){REC.a.currentTime=Math.max(0,REC.a.currentTime-15);return}REC.basmDone=true;recPlay(Math.max(0,REC.i-1))}
+    if(r==="play")recToggle();else if(r==="stop")recStop();else if(r==="next"){if(REC.full){fCur().currentTime+=15;return}REC.basmDone=true;recPlay(Math.max(0,REC.i+1))}else if(r==="prev"){if(REC.full){fCur().currentTime=Math.max(0,fCur().currentTime-15);return}REC.basmDone=true;recPlay(Math.max(0,REC.i-1))}
     else if(r==="rep"){REC.rep=!REC.rep;b.classList.toggle("on",REC.rep)}});
   document.getElementById("bk").onclick=()=>{recStop();suraState=null;vCoran()};
   $app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{S.trad=b.dataset.t;save();renderSura()});
@@ -1105,14 +1105,33 @@ function sayOne(t,lang,rate){return new Promise(res=>{try{const u=new SpeechSynt
 async function announce(n){const SU=await load("sourates"),x=SU[n-1];
   await sayOne(`Sourate ${n}. ${x.tr}, ${x.fr}.`,"fr-FR",0.95);if(!REC.full)return;
   await new Promise(r=>setTimeout(r,350));await sayOne(`${x.ar.replace(/[\u064B-\u065F\u0670]/g,"")}، رقم ${n}`,"ar-SA",0.85)}
+const FA=[new Audio(),new Audio()];FA.forEach(x=>x.preload="auto");
+function fCur(){return FA[REC.fi||0]}function fNext(){return FA[1-(REC.fi||0)]}
+function fSrc(el,n){const list=FULL[S.qari||"ar.alafasy"]||FULL["ar.alafasy"],f=String(n).padStart(3,"0")+".mp3";let k=0;
+  el.onerror=()=>{k++;if(k<list.length){el.src=list[k]+f;if(el._want)el.play().catch(()=>{})}else if(el===fCur()&&REC.full){recStop();toast("La récitation demande une connexion internet.")}};
+  el._n=n;el.src=list[0]+f;el.load()}
+function fMeta(){if("mediaSession" in navigator){try{navigator.mediaSession.metadata=new MediaMetadata({title:`Sourate ${REC.n}`,artist:(QARIS.find(q=>q[0]===(S.qari||"ar.alafasy"))||[0,""])[1],album:"Musulman au quotidien",artwork:[{src:"icons/icon-512.png",sizes:"512x512",type:"image/png"}]});
+  navigator.mediaSession.setActionHandler("nexttrack",()=>{if(REC.full&&REC.n<114)fAdvance(false)});navigator.mediaSession.setActionHandler("previoustrack",()=>{if(REC.full){fCur().currentTime=0}})}catch(e){}}}
+function fPrep(){REC.handoff=false;if(S.chain!==false&&REC.n<114)fSrc(fNext(),REC.n+1)}
 async function fullPlay(){
   recStop();REC.mode="continu";REC.full=true;REC.i=0;recMark();
-  if(S.annonce!==false){await announce(REC.n);if(!REC.full)return}const list=FULL[S.qari||"ar.alafasy"]||FULL["ar.alafasy"],f=String(REC.n).padStart(3,"0")+".mp3";let k=0;
-  REC.a.onerror=()=>{k++;if(k<list.length){REC.a.src=list[k]+f;REC.a.play().catch(()=>{})}else{recStop();toast("La récitation demande une connexion internet.")}};
-  REC.a.src=list[0]+f;REC.i=0;REC.full=true;REC.a.currentTime=0;
-  REC.a.play().then(()=>{REC.on=true;recMark()}).catch(()=>{REC.on=false;recMark()});
-  if("mediaSession" in navigator){try{navigator.mediaSession.metadata=new MediaMetadata({title:`Sourate ${REC.n}`,artist:(QARIS.find(q=>q[0]===(S.qari||"ar.alafasy"))||[0,""])[1],album:"Musulman au quotidien",artwork:[{src:"icons/icon-512.png",sizes:"512x512",type:"image/png"}]})}catch(e){}}
-  recMark()}
+  if(S.annonce!==false&&document.visibilityState==="visible"){await announce(REC.n);if(!REC.full)return}
+  const el=fCur();if(el._n!==REC.n||!el.src)fSrc(el,REC.n);el.currentTime=0;el._want=true;
+  el.play().then(()=>{REC.on=true;recMark()}).catch(()=>{REC.on=false;recMark()});
+  fMeta();fPrep();recMark()}
+async function fAdvance(already){
+  const old=fCur();REC.n++;
+  if(already){REC.fi=1-(REC.fi||0);old._want=false;old.pause();REC.on=true;fMeta();
+    if(document.visibilityState==="visible"&&view==="coran"&&suraState){REC.keep=true;suraState={n:REC.n,to:null};await renderSura();REC.keep=false}
+    fPrep();recMark();return}
+  old.pause();old._want=false;
+  if(document.visibilityState==="visible"&&view==="coran"&&suraState){REC.keep=true;suraState={n:REC.n,to:null};await renderSura();REC.keep=false}
+  REC.fi=1-(REC.fi||0);fullPlay()}
+FA.forEach(el=>{
+  el.addEventListener("timeupdate",()=>{if(el!==fCur()||!REC.full||REC.handoff||S.chain===false||REC.n>=114)return;
+    if(document.visibilityState==="hidden"&&el.duration&&el.duration-el.currentTime<0.45){REC.handoff=true;const nx=fNext();nx._want=true;nx.currentTime=0;nx.play().catch(()=>{})}});
+  el.addEventListener("ended",()=>{if(el!==fCur()||!REC.full)return;if(S.chain===false||REC.n>=114){recStop();return}fAdvance(!!REC.handoff)});
+});
 const REC={a:new Audio(),n:0,off:0,cnt:0,i:-1,basm:false,on:false};
 REC.a.preload="auto";
 function recUrl(g,br){return `https://cdn.islamic.network/quran/audio/${br||128}/${S.qari||"ar.alafasy"}/${g}.mp3`}
@@ -1132,11 +1151,9 @@ function recPlay(i){
   REC.a.play().then(()=>{REC.on=true;recMark()}).catch(()=>{REC.on=false;recMark()});
   if("mediaSession" in navigator){try{navigator.mediaSession.metadata=new MediaMetadata({title:`Sourate ${REC.n}, verset ${i+1}`,artist:(QARIS.find(q=>q[0]===(S.qari||"ar.alafasy"))||[0,""])[1],album:"Musulman au quotidien",artwork:[{src:"icons/icon-512.png",sizes:"512x512",type:"image/png"}]})}catch(e){}}
   recMark()}
-REC.a.onended=async()=>{if(REC.full){if(S.chain!==false&&REC.n<114){const nx=REC.n+1;
-    if(document.visibilityState==="visible"&&view==="coran"&&suraState){suraState={n:nx,to:null};await renderSura()}
-    REC.n=nx;fullPlay()}else recStop();return}if(REC.basm){REC.basmDone=true;recPlay(REC.i)}else{REC.basmDone=true;if(REC.rep){recPlay(REC.i)}else recPlay(REC.i+1)}};
-function recStop(){try{speechSynthesis.cancel()}catch(e){}REC.a.pause();REC.on=false;REC.i=-1;REC.basm=false;REC.basmDone=false;REC.full=false;recMark()}
-function recToggle(){if(REC.i<0){REC.basmDone=false;recPlay(0)}else if(REC.a.paused){REC.a.play();REC.on=true;recMark()}else{REC.a.pause();REC.on=false;recMark()}}
+REC.a.onended=async()=>{if(REC.full)return;if(REC.basm){REC.basmDone=true;recPlay(REC.i)}else{REC.basmDone=true;if(REC.rep){recPlay(REC.i)}else recPlay(REC.i+1)}};
+function recStop(){try{speechSynthesis.cancel()}catch(e){}REC.a.pause();FA.forEach(x=>{x._want=false;x.pause()});REC.on=false;REC.i=-1;REC.basm=false;REC.basmDone=false;REC.full=false;recMark()}
+function recToggle(){if(REC.full){const e=fCur();if(e.paused){e.play();REC.on=true}else{e.pause();REC.on=false}recMark();return}if(REC.i<0){REC.basmDone=false;recPlay(0)}else if(REC.a.paused){REC.a.play();REC.on=true;recMark()}else{REC.a.pause();REC.on=false;recMark()}}
 function recBar(){return `<div class="recbar" id="recbar"><button class="rb" data-r="prev" aria-label="Verset précédent">⏮</button><button class="rb rp" data-r="play" aria-label="Lecture">▶</button><button class="rb" data-r="next" aria-label="Verset suivant">⏭</button><span class="ri">Prêt</span><button class="rb rr" data-r="rep" aria-label="Répéter le verset" title="Répéter le verset">↻</button><button class="rb" data-r="stop" aria-label="Arrêter">■</button></div>`}
 
 /* ---------- Hadiths ---------- */
