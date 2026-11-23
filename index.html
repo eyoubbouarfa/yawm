@@ -357,6 +357,23 @@ select,input[type=time]{width:100%;max-width:100%;min-width:0;padding:9px 10px;b
 .close-bottom{position:sticky;bottom:calc(-24px - env(safe-area-inset-bottom));z-index:2;justify-self:center;width:min(260px,80%);margin:6px 0 calc(-12px - env(safe-area-inset-bottom));padding:10px 14px;border-radius:99px;font-weight:600;background:color-mix(in srgb,var(--surface) 72%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-color:color-mix(in srgb,var(--gold) 60%,transparent)}
 @font-face{font-family:"Cormorant Accueil";font-style:italic;font-weight:600;font-display:block;src:url("fonts/cormorant-italic-600.woff2") format("woff2")}
 @font-face{font-family:"Ruqaa Accueil";font-display:block;src:url("fonts/arefruqaa.woff2") format("woff2")}
+.onb{position:fixed;inset:0;z-index:55;background:radial-gradient(120% 80% at 50% 25%,#16845A,#062A1C);color:#fff;display:grid;grid-template-rows:1fr auto;padding:calc(28px + env(safe-area-inset-top)) 24px calc(22px + env(safe-area-inset-bottom));transition:opacity .35s}
+.onb.out{opacity:0;pointer-events:none}
+.onb .os{align-self:center;display:grid;gap:14px;max-width:460px;margin:0 auto;width:100%}
+.onb .ok{font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:#F1D98A}
+.onb h2{font-family:var(--display);font-size:31px;line-height:1.15;margin:0;color:#fff}
+.onb ul{margin:0;padding:0;list-style:none;display:grid;gap:12px}
+.onb li{display:grid;grid-template-columns:26px 1fr;gap:8px;font-size:16px;line-height:1.4}
+.onb li b{color:#F1D98A}
+.onb li i{font-style:normal;color:#F1D98A;font-size:18px}
+.onb .om{font-size:14px;min-height:20px;color:#F1D98A}
+.onb .ob{display:grid;gap:10px}
+.onb .ob button{border-radius:12px;padding:13px 14px;font-size:16px;font-weight:700;border:1px solid rgba(241,217,138,.6);background:rgba(0,0,0,.18);color:#fff}
+.onb .ob button.pr{background:#F1D98A;color:#0A3F2B;border-color:#F1D98A}
+.onb .of{display:flex;align-items:center;justify-content:space-between;max-width:460px;margin:0 auto;width:100%;gap:12px}
+.onb .of button{background:none;border:0;color:#F1D98A;font-size:15px;font-weight:600;padding:10px 4px}
+.onb .of .nx{background:#F1D98A;color:#0A3F2B;border-radius:99px;padding:10px 22px;font-weight:700}
+.onb .dots{display:flex;gap:7px}.onb .dots i{width:8px;height:8px;border-radius:50%;background:rgba(241,217,138,.35)}.onb .dots i.on{background:#F1D98A;width:22px;border-radius:4px}
 .splash{position:fixed;inset:0;z-index:50;background:radial-gradient(120% 80% at 50% 30%,#16845A,#062A1C);color:#fff;display:grid;place-items:center;padding:32px 28px calc(32px + env(safe-area-inset-bottom));text-align:center;transition:opacity .45s}
 .splash.out{opacity:0;pointer-events:none}
 .splash .in{display:grid;gap:16px;max-width:520px}
@@ -410,6 +427,7 @@ const CITIES={
   "Nantes":[47.2184,-1.5536],"Nice":[43.7102,7.2620],"Saint-Étienne":[45.4397,4.3872],"Grenoble":[45.1885,5.7245]
 };
 const METHODS={uoif:{n:"UOIF (12° / 12°)",f:12,i:12},mwl:{n:"Ligue islamique mondiale (18° / 17°)",f:18,i:17},isna:{n:"ISNA (15° / 15°)",f:15,i:15}};
+const FIRSTRUN=(()=>{try{return !localStorage.getItem("mq-settings")&&!localStorage.getItem("mq-onboarded")}catch(e){return false}})();
 let S={city:"Clermont-Ferrand",method:"uoif",asr:1,bed:"22:30",trad:"hamidullah",goal:25,speed:0.55,hsrc:"HJCoSA",hAdj:0,hOff:0};
 try{Object.assign(S,JSON.parse(localStorage.getItem("mq-settings")||"{}"))}catch(e){}
 function save(){try{localStorage.setItem("mq-settings",JSON.stringify(S))}catch(e){}}
@@ -885,7 +903,7 @@ function notifEvents(nDays){
   const day=(d,k)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+k);
   for(let i=0;i<nDays;i++){
     const d=day(t0,i),P=prayerTimes(d,la,ln,m,S.asr);
-    if(o.pri)[["Fajr",P.fajr],["Dhuhr",P.dhuhr],["Asr",P.asr],["Maghrib",P.maghrib],["Isha",P.isha]].forEach(([n,t])=>add(t,`${n} · ${hm(t)}`,"","pri"));
+    if(o.pri)[["Fajr",P.fajr],["Dhuhr",P.dhuhr],["Asr",P.asr],["Maghrib",P.maghrib],["Isha",P.isha]].forEach(([n,t])=>add(t,`${n} · ${hm(t)}`,"☺️","pri"));
     const tm=day(d,1),ht=hijri(tm),N=prayerTimes(tm,la,ln,m,S.asr),dows=[];
     if(o.lj&&!forbidden(ht)){if(tm.getDay()===1)dows.push("lundi");if(tm.getDay()===4)dows.push("jeudi")}
     let white=null;
@@ -914,7 +932,7 @@ function notifSupport(){
   }
   return "ok";
 }
-const notifKey=()=>JSON.stringify([3,LL(),S.method,S.asr,notifOpts(),S.hsrc,S.hAdj||0,S.hOff||0]);
+const notifKey=()=>JSON.stringify([4,LL(),S.method,S.asr,notifOpts(),S.hsrc,S.hAdj||0,S.hOff||0]);
 async function pushPost(path,data){const r=await fetch(PUSH_URL+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(data)});if(!r.ok)throw new Error("serveur "+r.status);return r.json()}
 let PUSHING=null;
 async function pushSync(force){
@@ -1014,6 +1032,40 @@ function openNotifSheet(){
 (function tickStart(){if(document.querySelector(".splash:not(.out)")||document.hidden){setTimeout(tickStart,300);return}TICKI=0;tickRun()})();
 document.addEventListener("visibilitychange",()=>{if(!document.hidden){TICKI=0;tickRun()}});
 addEventListener("resize",()=>{clearTimeout(window.__tkr);window.__tkr=setTimeout(()=>{TICKI=Math.max(0,TICKI-1);tickRun()},400)});
+/* ---------- Premier lancement guidé ---------- */
+function onboarding(){
+  let k=0;const el=document.createElement("div");el.className="onb";el.setAttribute("role","dialog");el.setAttribute("aria-label","Prise en main");document.body.appendChild(el);
+  const done=()=>{try{localStorage.setItem("mq-onboarded","1")}catch(e){}el.classList.add("out");setTimeout(()=>el.remove(),400);route()};
+  const screens=[
+    ()=>`<span class="ok">Bienvenue dans Yawm</span><h2>Ta journée, du Maghrib au Maghrib</h2>
+      <ul><li><i>◆</i><span><b>Chemine</b> te montre la prochaine prière et ce que la Sunna recommande à chaque moment.</span></li>
+      <li><i>◆</i><span>Chaque pratique est donnée <b>avec sa source</b> et son degré d'authenticité. Touche-la pour lire le hadith.</span></li>
+      <li><i>◆</i><span><b>Coran, hadiths, jeûne, dhikr</b> : tout fonctionne aussi hors connexion.</span></li></ul>`,
+    ()=>`<span class="ok">Étape 2 sur 3</span><h2>Tes horaires de prière</h2>
+      <ul><li><i>◆</i><span>Ils sont calculés pour ta ville, directement sur ton téléphone.</span></li>
+      <li><i>◆</i><span>Ville actuelle : <b id="obcity">${esc(placeName())}</b></span></li></ul>
+      <div class="ob"><button class="pr" id="obgeo">Utiliser ma position</button></div>
+      <p class="om" id="obm">Tu peux aussi choisir ta ville et la méthode de calcul dans Réglages.</p>`,
+    ()=>{const st=notifSupport(),on=notifActive();return `<span class="ok">Étape 3 sur 3</span><h2>Ne manque aucune prière</h2>
+      <ul><li><i>◆</i><span>Une notification <b>à l'heure de chaque prière</b>.</span></li>
+      <li><i>◆</i><span>La veille au Maghrib, un rappel pour le <b>jeûne du lundi, du jeudi et des jours blancs</b>.</span></li></ul>
+      ${st==="ok"?`<div class="ob"><button class="pr" id="obon">${on?"Notifications activées":"Activer les notifications"}</button><button id="obtest">Tester</button></div>
+        <p class="om" id="obm">${on?"Touche Tester pour vérifier.":"Le téléphone va te demander l'autorisation : touche Autoriser."}</p>`
+      :st==="ios"?`<p class="om">Sur iPhone : touche Partager dans Safari, puis « Sur l'écran d'accueil ». Ouvre ensuite Yawm depuis son icône et active les notifications dans Réglages.</p>`
+      :`<p class="om">Tu pourras les activer plus tard dans Réglages.</p>`}`}
+  ];
+  const show=()=>{
+    el.innerHTML=`<div class="os">${screens[k]()}</div><div class="of"><button id="obskip">${k<2?"Passer":""}</button><div class="dots">${screens.map((_,i)=>`<i class="${i===k?"on":""}"></i>`).join("")}</div><button class="nx" id="obnx">${k<2?"Suivant":"Commencer"}</button></div>`;
+    const m=t=>{const e=document.getElementById("obm");if(e)e.textContent=t};
+    document.getElementById("obnx").onclick=()=>{if(k<2){k++;show()}else done()};
+    const sk=document.getElementById("obskip");if(k<2)sk.onclick=done;
+    const g=document.getElementById("obgeo");if(g)g.onclick=()=>{m("Localisation…");S.autoLoc=true;locate().then(()=>{document.getElementById("obcity").textContent=placeName();m("C'est fait. Tes horaires sont calculés pour "+placeName()+".")}).catch(e=>m(e.message))};
+    const a=document.getElementById("obon");if(a)a.onclick=()=>{if(notifActive()){m("Déjà activées. Touche Tester.");return}m("Activation…");notifEnable().then(()=>{a.textContent="Notifications activées";m("C'est fait. Touche Tester pour vérifier.")}).catch(e=>m(e.message))};
+    const t=document.getElementById("obtest");if(t)t.onclick=()=>{m("Envoi d'une notification de test…");notifTest().then(()=>m("Envoyée : elle arrive dans quelques secondes.")).catch(e=>m(e.message))};
+  };
+  show();
+}
+if(FIRSTRUN)(function obStart(){if(document.querySelector(".splash:not(.out)")){setTimeout(obStart,300);return}onboarding()})();
 /* ---------- Rappels : fichiers calendrier (.ics) ---------- */
 const ICS_KINDS={
   prieres:{n:"Prières",d:"Les cinq prières à l'heure, avec les invocations d'après la prière."},
