@@ -1,4 +1,4 @@
-const CACHE = "au-quotidien-v42";
+const CACHE = "au-quotidien-v43";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-180.png", "img/minaret.svg", "fonts/cormorant-italic-600.woff2", "fonts/arefruqaa.woff2",
   "data/journee.json", "data/jeune.json", "data/alimentation.json", "data/nawafil.json", "data/sourates.json", "data/themes.json", "data/versions.json",
   "data/coran_ar.json", "data/coran_hamidullah.json", "data/coran_maash.json", "data/coran_montada.json", "data/hadiths.json", "data/fiqh.json"];
@@ -13,4 +13,22 @@ self.addEventListener("fetch", e => {
     if (res.ok) { const cp = res.clone(); caches.open(CACHE).then(c => c.put(e.request, cp)); }
     return res;
   }).catch(() => caches.match(e.request).then(r => r || caches.match("index.html"))));
+});
+
+// Notifications envoyées par le serveur Yawm
+self.addEventListener("push", e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (x) { d = { body: e.data ? e.data.text() : "" }; }
+  e.waitUntil(self.registration.showNotification(d.title || "Au quotidien", {
+    body: d.body || "", tag: d.tag || undefined, renotify: !!d.tag, icon: "icons/icon-192.png",
+    vibrate: [200, 100, 200], data: { url: d.url || "./#chemin" }
+  }));
+});
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const url = new URL(e.notification.data && e.notification.data.url || "./#chemin", self.registration.scope).href;
+  e.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(L => {
+    for (const c of L) if (c.url.startsWith(self.registration.scope) && "focus" in c) { c.navigate(url).catch(() => {}); return c.focus(); }
+    return clients.openWindow(url);
+  }));
 });

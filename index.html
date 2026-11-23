@@ -543,6 +543,7 @@ async function route(){
   document.querySelectorAll("nav.bar a").forEach(a=>a.setAttribute("aria-current",a.dataset.v===view?"page":"false"));closeDlg();
   window.scrollTo(0,0);if(view==="chemin")SCROLLNEXT=true;
   if(GCV!==view){GCV=view;gc("/"+view,"Onglet "+view)}
+  pushSync();
   stopSpeak();if(typeof recStop==="function"&&REC.i>=0)recStop();try{({chemin:vChemin,dhikr:vDhikr,jeune:vJeune,apprendre:vApprendre,coran:vCoran,hadiths:vHadiths,reglages:vReglages})[view]()}
   catch(e){$app.innerHTML='<p class="loading">Les données n\'ont pas pu être chargées. Recharge la page.</p>'}
 }
@@ -823,6 +824,98 @@ function whiteBlock(now,onDark){
   return `<div class="white ${onDark?"dark":""}"><div class="wt">Jours blancs · ${HMONTHS[h.m-1]}</div>
     <div class="wmoons">${days.map((d,k)=>{const mi=moonInfo(new Date(d.getTime()+21*3600e3));return `<div class="${k===idx?"cur":""}">${moonSVG(mi.f,20)}<b>${13+k}</b><span>${d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})}</span><span class="pc">lune à ${Math.round(mi.ill*100)} %</span></div>`}).join("")}</div>
     <div class="wst">${status}</div><div class="wn">La récompense d'une année de jeûne est promise pour les trois jours accomplis. Allah seul sait.</div></div>`;
+}
+/* ---------- Notifications (Web Push via le serveur Yawm) ---------- */
+const PUSH_URL="";/* adresse du serveur Cloudflare, ex. https://yawm-notifs.xxx.workers.dev */
+const NOTIF_KINDS={pri:["Prières","À l'heure de chaque prière obligatoire."],lj:["Jeûne du lundi et du jeudi","La veille, au Maghrib."],blanc:["Jours blancs","Trois jours, deux jours puis la veille, au Maghrib."]};
+function notifOpts(){return Object.assign({pri:true,lj:true,blanc:true},S.notif||{})}
+function notifEvents(nDays){
+  const [la,ln]=LL(),m=METHODS[S.method],o=notifOpts(),ev=[],now=Date.now();
+  const add=(t,ti,b,tg)=>{if(t.getTime()>now+30000)ev.push({t:t.getTime(),ti,b,tg})};
+  const t0=new Date();t0.setHours(0,0,0,0);
+  const forbidden=h=>h&&(h.m===9||(h.m===10&&h.d===1)||(h.m===12&&h.d>=10&&h.d<=13));
+  const day=(d,k)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+k);
+  for(let i=0;i<nDays;i++){
+    const d=day(t0,i),P=prayerTimes(d,la,ln,m,S.asr);
+    if(o.pri)[["Fajr",P.fajr],["Dhuhr",P.dhuhr],["Asr",P.asr],["Maghrib",P.maghrib],["Isha",P.isha]].forEach(([n,t])=>add(t,`${n} · ${hm(t)}`,`L'heure de la prière ${/^[AEIOU]/.test(n)?"d'":"de "}${n} est entrée.`,"pri"));
+    const tm=day(d,1),ht=hijri(tm),N=prayerTimes(tm,la,ln,m,S.asr),dows=[];
+    if(o.lj&&!forbidden(ht)){if(tm.getDay()===1)dows.push("lundi");if(tm.getDay()===4)dows.push("jeudi")}
+    let white=null;
+    if(o.blanc)for(let k=1;k<=3;k++){const h=hijri(day(d,k)),first=h&&h.m===12?14:13;if(h&&h.d===first&&h.m!==9){white={k,h,first};break}}
+    if(!dows.length&&!white)continue;
+    const mois=white?HMONTHS[white.h.m-1]:"",span=white?(white.first===14?"14 et 15":"13, 14 et 15"):"";
+    let ti,b;
+    if(white&&white.k>1){
+      const debut=day(d,white.k).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+      ti=`Jours blancs dans ${white.k} jours`;b=`Les ${span} ${mois}, à partir du ${debut}. La récompense d'une année de jeûne est promise pour les trois jours accomplis. Allah seul sait.`;
+      if(dows.length){ti=`Demain : jeûne du ${dows[0]} · jours blancs dans ${white.k} jours`;b=`Formuler l'intention et prévoir le repas d'avant l'aube. Fajr à ${hm(N.fajr)}, rupture au Maghrib à ${hm(N.maghrib)}. `+b}
+    }else{
+      const what=[...dows.map(x=>"jeûne du "+x),...(white?["premier des jours blancs"]:[])].join(" et ");
+      ti=`Demain : ${what}`;b=`Formuler l'intention et prévoir le repas d'avant l'aube. Fajr à ${hm(N.fajr)}, rupture au Maghrib à ${hm(N.maghrib)}.${white?` Jours blancs : les ${span} ${mois}.`:""}`;
+    }
+    add(P.maghrib,ti,b,"jeune");
+  }
+  const last=day(t0,nDays-3),PL=prayerTimes(last,la,ln,m,S.asr);
+  add(new Date(PL.dhuhr.getTime()+30*60000),"Tes rappels s'arrêtent bientôt","Ouvre Au quotidien pour prolonger tes notifications.","renew");
+  return ev;
+}
+function notifSupport(){
+  if(!PUSH_URL)return "off";
+  if(!("serviceWorker" in navigator)||!("PushManager" in window)||!("Notification" in window)){
+    const ios=/iphone|ipad|ipod/i.test(navigator.userAgent),inst=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+    return ios&&!inst?"ios":"no";
+  }
+  return "ok";
+}
+const notifKey=()=>JSON.stringify([LL(),S.method,S.asr,notifOpts(),S.hsrc,S.hAdj||0,S.hOff||0]);
+async function pushPost(path,data){const r=await fetch(PUSH_URL+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(data)});if(!r.ok)throw new Error("serveur "+r.status);return r.json()}
+async function pushSync(force){
+  try{
+    if(!S.notifOn||notifSupport()!=="ok"||Notification.permission!=="granted")return;
+    const k=notifKey();if(!force&&S.pushKey===k&&Date.now()-(S.pushAt||0)<20*3600000)return;
+    const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
+    if(!sub){S.notifOn=false;save();return}
+    await pushPost("/schedule",{sub:sub.toJSON(),events:notifEvents(30)});
+    S.pushKey=k;S.pushAt=Date.now();save();
+  }catch(e){}
+}
+async function notifEnable(){
+  const perm=await Notification.requestPermission();
+  if(perm!=="granted")throw new Error("Notifications refusées. Autorise-les pour Au quotidien dans les réglages du téléphone.");
+  const reg=await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub){const {key}=await (await fetch(PUSH_URL+"/key")).json();
+    const raw=Uint8Array.from(atob(key.replace(/-/g,"+").replace(/_/g,"/")+"==".slice(0,(4-key.length%4)%4)),c=>c.charCodeAt(0));
+    sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:raw})}
+  S.notifOn=true;save();await pushSync(true);
+  if(!S.pushAt)throw new Error("Le serveur de notifications ne répond pas. Réessaie plus tard.");
+}
+async function notifDisable(){
+  S.notifOn=false;S.pushKey=null;save();
+  try{const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
+    if(sub){await pushPost("/unsubscribe",{endpoint:sub.endpoint}).catch(()=>{});await sub.unsubscribe()}}catch(e){}
+}
+async function notifTest(){const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();if(!sub)throw new Error("Active d'abord les notifications.");await pushPost("/test",{sub:sub.toJSON()})}
+function notifBox(){
+  const st=notifSupport();if(st==="off")return "";
+  const o=notifOpts(),on=S.notifOn&&st==="ok"&&Notification.permission==="granted";
+  const msg=st==="ios"?"Sur iPhone, ajoute d'abord l'appli à l'écran d'accueil (Partager, puis « Sur l'écran d'accueil »), puis ouvre-la depuis l'icône."
+    :st==="no"?"Ce navigateur ne permet pas les notifications. Ouvre l'appli installée sur l'écran d'accueil."
+    :on?"Activées pour "+esc(placeName())+". Elles arrivent même appli fermée, avec le son de notification du téléphone."
+    :"Désactivées.";
+  return `<div class="box"><h3>Notifications</h3>
+    <p style="margin:0" id="ntst">${msg}</p>
+    ${st==="ok"?`${Object.entries(NOTIF_KINDS).map(([k,[n,d]])=>`<label style="display:flex;gap:8px;align-items:flex-start;font-weight:600"><input type="checkbox" data-nk="${k}" ${o[k]?"checked":""} style="margin-top:4px"><span>${n}<span class="src" style="display:block;font-weight:400">${d}</span></span></label>`).join("")}
+    <div class="row">${on?`<button class="btn" id="noff">Désactiver</button><button class="btn gold" id="ntest">Tester</button>`:`<button class="btn primary" id="non">Activer les notifications</button>`}</div>`:""}
+    <p class="src" style="margin:0">L'appli prépare les rappels des 30 prochains jours et les remet au serveur d'envoi : des heures et des textes, sans ta position. Ils se renouvellent à chaque ouverture.</p></div>`;
+}
+function bindNotif(){
+  const m=t=>{const e=document.getElementById("ntst");if(e)e.textContent=t};
+  $app.querySelectorAll("[data-nk]").forEach(c=>c.onchange=()=>{const o=notifOpts();o[c.dataset.nk]=c.checked;S.notif=o;save();pushSync(true)});
+  const on=document.getElementById("non"),off=document.getElementById("noff"),te=document.getElementById("ntest");
+  if(on)on.onclick=()=>{m("Activation…");notifEnable().then(()=>vReglages()).catch(e=>m(e.message))};
+  if(off)off.onclick=()=>{notifDisable().then(()=>vReglages())};
+  if(te)te.onclick=()=>{m("Envoi d'une notification de test…");notifTest().then(()=>m("Notification de test envoyée.")).catch(e=>m(e.message))};
 }
 /* ---------- Rappels : fichiers calendrier (.ics) ---------- */
 const ICS_KINDS={
@@ -1250,7 +1343,8 @@ function vReglages(){
     <p class="src" style="margin:0" id="hst">${esc(hijriStatus())}</p>
     <div class="row"><button class="btn" id="hsync">Vérifier maintenant</button></div>
     <p class="src" style="margin:0">Aucun organisme français ne publie ses annonces sous une forme que l'appli peut lire. Si ta mosquée annonce un autre jour, utilise la correction. Allah seul sait.</p></div>
-  <div class="box"><h3>Rappels sur le téléphone</h3>
+  ${notifBox()}
+  <div class="box"><h3>Rappels dans l'agenda</h3>
     <p style="margin:0">Les rappels passent par l'agenda du téléphone : ils sonnent même appli fermée. Chaque fichier couvre les 60 prochains jours pour ${esc(placeName())} ; recrée-les tous les deux mois ou après un changement de ville.</p>
     <div class="cards">${Object.entries(ICS_KINDS).map(([k,v])=>`<button class="card" data-ics="${k}"><span class="t">Ajouter : ${esc(v.n)}</span><span class="r">${esc(v.d)}</span></button>`).join("")}</div>
     <p class="src" id="icsmsg" style="margin:0"></p></div>
@@ -1272,6 +1366,7 @@ function vReglages(){
     }catch(err){gm("La recherche a besoin d'internet.")}};
   ["city","method","asr","bed"].forEach(id=>document.getElementById(id).onchange=up);
   $app.querySelectorAll("[data-ics]").forEach(b=>b.onclick=()=>downloadICS(b.dataset.ics));
+  bindNotif();
   document.getElementById("hsrc").onchange=e=>{S.hsrc=e.target.value;save();syncHijri(true).then(()=>{if(view==="reglages")vReglages()});vReglages()};
   document.getElementById("hadj").onchange=e=>{S.hAdj=+e.target.value;save();vReglages()};
   document.getElementById("hsync").onclick=()=>{document.getElementById("hst").textContent="Vérification…";syncHijri(true).then(()=>{if(view==="reglages")vReglages()})};
