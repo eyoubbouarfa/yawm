@@ -810,6 +810,7 @@ function sunMini(now,np){
   let g=`<svg viewBox="0 0 360 64" class="sky mini" role="img" aria-label="Course du soleil et prochaine prière">
     <line x1="8" y1="${H}" x2="352" y2="${H}" stroke="rgba(241,217,138,.45)" stroke-dasharray="3 3"/>
     <path d="${d}" fill="none" stroke="#F1D98A" stroke-width="1.6" opacity=".9"/>`;
+  g+=`<line x1="${X(hh(P.sunrise))}" y1="${H-4}" x2="${X(hh(P.sunrise))}" y2="${H+4}" stroke="#F1D98A" stroke-width="1.6"/>`;
   [P.fajr,P.dhuhr,P.asr,P.maghrib,P.isha].forEach(t=>{const isN=np&&Math.abs(np[1]-t)<6e4;g+=`<circle cx="${X(hh(t))}" cy="${Y(sunAlt(day,hh(t),la,ln))}" r="${isN?3.6:2.4}" fill="${isN?"#F1D98A":"#0A3F2B"}" stroke="#F1D98A" stroke-width="1.2"/>`});
   const tx=Math.min(262,Math.max(98,nx));
   g+=`<line x1="${nx}" y1="16" x2="${nx}" y2="62" stroke="rgba(255,255,255,.35)"/>
