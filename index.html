@@ -936,7 +936,7 @@ function nextWhite(){
 }
 function tickMsgs(){
   const L=[],fd=d=>d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
-  if(notifSupport()!=="off")L.push({h:`<b>Profite des notifications</b> · les prières à l'heure, les jeûnes du lundi, du jeudi et des jours blancs rappelés la veille au Maghrib · <b>Touche ici pour les activer et faire le test</b>`,a:openNotifSheet});
+  if(notifSupport()!=="off"&&!notifActive())L.push({h:`<b>Profite des notifications</b> · les prières à l'heure, les jeûnes du lundi, du jeudi et des jours blancs rappelés la veille au Maghrib · <b>Touche ici pour les activer et faire le test</b>`,a:openNotifSheet});
   const w=nextWhite();
   if(w){const span=w.first===14?"14 et 15":"13, 14 et 15",when=w.now?"en ce moment":"à partir du "+fd(w.d);
     L.push({h:`<b>Jours blancs</b> · les ${span} ${HMONTHS[w.h.m-1]}, ${when} · « Lorsque tu jeûnes trois jours dans le mois, jeûne le treize, le quatorze et le quinze ! » <i>(Ibn Mâjah, bon)</i> · Trois jours par mois valent le jeûne de toute l'année <i>(Sahîh al-Bukhârî n° 1976)</i>`,a:()=>{location.hash="#jeune"}})}
@@ -964,7 +964,7 @@ function openNotifSheet(){
     <p class="src" id="nsm" style="margin:0"></p><p class="src" style="margin:0">Tu choisis les rappels dans Réglages, rubrique Notifications.</p>`;
   sheet(h);
   const m=t=>{const e=document.getElementById("nsm");if(e)e.textContent=t},a=document.getElementById("nsa"),b=document.getElementById("nst");
-  if(a)a.onclick=()=>{if(notifActive()){m("Les notifications sont déjà activées. Touche Tester.");return}m("Activation…");notifEnable().then(()=>{a.textContent="Activées";m("C'est fait. Touche Tester pour vérifier.")}).catch(e=>m(e.message))};
+  if(a)a.onclick=()=>{if(notifActive()){m("Les notifications sont déjà activées. Touche Tester.");return}m("Activation…");notifEnable().then(()=>{a.textContent="Activées";m("C'est fait. Touche Tester pour vérifier.");TICKI=0;tickRun()}).catch(e=>m(e.message))};
   if(b)b.onclick=()=>{m("Envoi d'une notification de test…");notifTest().then(()=>m("Notification de test envoyée : elle arrive dans quelques secondes.")).catch(e=>m(e.message))};
 }
 (function tickStart(){if(document.querySelector(".splash:not(.out)")||document.hidden){setTimeout(tickStart,300);return}TICKI=0;tickRun()})();
