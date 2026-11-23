@@ -239,7 +239,9 @@ label{font-weight:600;font-size:14px;display:grid;gap:4px}
 .tl .step.past .dot{width:9px;height:9px;left:-23px;top:6px}
 .tl .step.past.open .sh{background:var(--surface)}
 .now.nowsky{display:block;margin:8px 0 10px}
-.now.nowsky::before{top:50%;margin-top:-6px}
+.now.nowsky::before{top:4px}
+.nowt{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.nowt span{flex:1;height:2px;background:linear-gradient(90deg,var(--gold),transparent)}
 .skycard{background:linear-gradient(160deg,var(--phase),#062A1C);border:1px solid var(--gold);border-radius:12px;padding:4px 6px 2px}
 .skycard svg{display:block;width:100%;height:auto}
 .fic{display:inline-grid;place-items:center;width:44px;height:44px;flex:none;background:var(--soft);border-radius:10px}
@@ -574,7 +576,7 @@ function vChemin(){
   const now=new Date(),D=islamicDay(now),st=D.steps,cur=st[D.cur],next=st[D.cur+1];
   document.documentElement.style.setProperty("--phase",PHASE[cur.k]);
   const dateStr=D.end.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
-  const T=D.B,tl=[["Fajr",T.fajr,"fajr"],["Lever",T.sunrise,"lever"],["Dhuhr",T.dhuhr,"dhuhr"],["Asr",T.asr,"asr"],["Maghrib",D.A.maghrib,"maghrib"],["Isha",D.A.isha,"isha"]];
+  const T=D.B,tl=[["Fajr",T.fajr,"fajr"],["Lever",T.sunrise,"lever"],["Dhuhr",T.dhuhr,"dhuhr"],["Asr",T.asr,"asr"],["Maghrib",T.maghrib,"maghrib"],["Isha",D.A.isha,"isha"]];
   const PR=[["Maghrib",D.A.maghrib,"maghrib"],["Isha",D.A.isha,"isha"],["Fajr",T.fajr,"fajr"],["Dhuhr",T.dhuhr,"dhuhr"],["Asr",T.asr,"asr"],["Maghrib",T.maghrib,"fin"]];
   const NP=PR.find(x=>x[1]>now);
   const nextCell=NP?(NP[2]==="fin"?"maghrib":NP[2]):null;
@@ -610,7 +612,7 @@ function vChemin(){
         ${p.p?`<div class="row"><button class="btn primary" data-after>Après la prière</button><button class="btn gold" data-count="sunna">Compteur</button><button class="btn" data-howto>Comment prier</button></div>`:""}
         ${p.k==="coucher"?`<div class="row"><button class="btn gold" data-count="coucher">Compteur 33 · 33 · 34</button></div>`:""}
       </div></div>`;
-    if(i===D.cur)h+=`<div class="now nowsky" id="now"><div class="skycard">${sunSVG(now,NP)}</div></div>`;
+    if(i===D.cur)h+=`<div class="now nowsky" id="now"><div class="nowt" data-nowt>Maintenant · ${hm(now)}<span></span></div><div class="skycard">${sunSVG(now,NP)}</div></div>`;
   });
   const finNext=NP&&NP[2]==="fin";
   h+=`<div class="step lvl${lvl(st.length)} ${finNext?"next":""}" id="st-fin"><span class="dot"></span><div class="sh" style="cursor:default"><span class="tm">${hm(T.maghrib)}</span><span class="ti">Maghrib${finNext?`<span class="nextb">prochaine · dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span></span>`:""}<span class="sub">Un nouveau jour commence</span></span><span></span></div></div></div>`;
@@ -647,7 +649,7 @@ setInterval(()=>{
   const D=islamicDay(new Date());
   if(D.steps[D.cur].k!==LASTCUR&&!$dlg.innerHTML){vChemin();return}
   document.querySelectorAll("[data-cd]").forEach(e=>e.textContent=until(new Date(+e.dataset.cd)));
-  const c=document.querySelector("#now .skycard");if(c)c.innerHTML=sunSVG(new Date(),NOWNP);
+  const nt=document.querySelector("#now [data-nowt]");if(nt)nt.firstChild.textContent="Maintenant · "+hm(new Date());const c=document.querySelector("#now .skycard");if(c)c.innerHTML=sunSVG(new Date(),NOWNP);
 },30000);
 function openAfter(){
   const a=J.filter(x=>x.step==="apres");
