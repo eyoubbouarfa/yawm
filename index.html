@@ -942,6 +942,8 @@ function tickMsgs(){
     L.push({h:`<b>Jours blancs</b> · les ${span} ${HMONTHS[w.h.m-1]}, ${when} · « Lorsque tu jeûnes trois jours dans le mois, jeûne le treize, le quatorze et le quinze ! » <i>(Ibn Mâjah, bon)</i> · Trois jours par mois valent le jeûne de toute l'année <i>(Sahîh al-Bukhârî n° 1976)</i>`,a:()=>{location.hash="#jeune"}})}
   const t=new Date();let n=null;for(let k=1;k<=7&&!n;k++){const d=new Date(t.getFullYear(),t.getMonth(),t.getDate()+k);if(d.getDay()===1||d.getDay()===4)n=d}
   L.push({h:`<b>Lundi et jeudi</b> · prochain jeûne ${n?"le "+fd(n):""} · « Les œuvres sont présentées le lundi et le jeudi, et j’aime que mes œuvres soient présentées alors que je jeûne. » <i>(At-Tirmidhî, Muslim, authentique)</i>`,a:()=>{location.hash="#jeune"}});
+  /* priorité aux notifications : elles reviennent entre chaque autre message */
+  if(L.length>2&&L[0].a===openNotifSheet){const N=L[0],R=L.slice(1);return R.flatMap(m=>[N,m])}
   return L;
 }
 function tickRun(){
