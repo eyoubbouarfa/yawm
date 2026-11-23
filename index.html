@@ -238,12 +238,16 @@ label{font-weight:600;font-size:14px;display:grid;gap:4px}
 .tl .step.past .sh .sub,.tl .step.past .rk,.tl .step.past .nextb{display:none}
 .tl .step.past .dot{width:9px;height:9px;left:-23px;top:6px}
 .tl .step.past.open .sh{background:var(--surface)}
-.now.nowsky{display:block;margin:8px 0 10px}
+.now.nowsky{display:block;margin:6px 0 8px}
+.band.stick{position:sticky;top:0;z-index:5}
+.band .skywrap svg{display:block;width:100%;height:auto;max-height:30vh}
+.tl .card.mini{padding:6px 10px;gap:2px;border-radius:8px}
+.tl .card.mini .t{font-size:14px;font-weight:600;line-height:1.25}
+.tl .card.mini .pill{font-size:10.5px;padding:1px 6px}
+.tl .card.mini .r{line-height:1}
 .now.nowsky::before{top:4px}
 .nowt{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .nowt span{flex:1;height:2px;background:linear-gradient(90deg,var(--gold),transparent)}
-.skycard{background:linear-gradient(160deg,var(--phase),#062A1C);border:1px solid var(--gold);border-radius:12px;padding:4px 6px 2px}
-.skycard svg{display:block;width:100%;height:auto}
 .fic{display:inline-grid;place-items:center;width:44px;height:44px;flex:none;background:var(--soft);border-radius:10px}
 .fic svg{width:40px;height:40px}
 .fsteps{display:flex;gap:6px;overflow-x:auto;margin:12px 0 4px;padding-bottom:4px}
@@ -564,8 +568,10 @@ const RAKA={
 function rakaBars(k){const g=RAKA[k];if(!g)return "";
   return `<span class="rk" aria-label="Unités de prière">${g.map(([t,n,l])=>`<span class="rg ${t}"><span class="bars">${"<i></i>".repeat(n)}</span><small>${n} ${esc(l)}</small></span>`).join("")}</span>`}
 
-function card(x){
-  const i=J.indexOf(x),cls=x.src==="Externe"?"ext":x.src==="Collection"?"coll":"";
+function card(x,mini){
+  const i=J.indexOf(x),cls=(x.src==="Externe"?"ext":x.src==="Collection"?"coll":"")+(mini?" mini":"");
+  if(mini){const gr=x.src==="Externe"?`<span class="pill warn">À vérifier</span>`:x.src==="Collection"?`<span class="pill ok">${esc(x.g)}</span>`:`<span class="pill ${gradeCls(x.g)}">${esc(clean(x.g))}</span>`;
+    return `<button class="card ${cls}" data-j="${i}"><span class="t">${esc(x.s)}</span><span class="r">${gr}</span></button>`}
   const meta=x.src==="Externe"?`<span class="pill warn">À vérifier</span> ${esc(x.ref)}`
     :x.src==="Collection"?`<span class="pill gold">${esc(x.book)} n° ${esc(x.num)}</span> <span class="pill ok">${esc(x.g)}</span>`
     :`<span class="pill ${gradeCls(x.g)}">${esc(clean(x.g))}</span> ${esc(clean(x.ref))}`;
@@ -580,14 +586,14 @@ function vChemin(){
   const PR=[["Maghrib",D.A.maghrib,"maghrib"],["Isha",D.A.isha,"isha"],["Fajr",T.fajr,"fajr"],["Dhuhr",T.dhuhr,"dhuhr"],["Asr",T.asr,"asr"],["Maghrib",T.maghrib,"fin"]];
   const NP=PR.find(x=>x[1]>now);
   const nextCell=NP?(NP[2]==="fin"?"maghrib":NP[2]):null;
-  const bOpen=!!S.bandOpen,sky=bOpen?(S.sky||"times"):"times";
-  let h=`<header class="band ${bOpen?"":"closed"}">${GEAR}<img class="bm" src="img/minaret.svg" alt="">
+  const bOpen=!!S.bandOpen,sky=bOpen?(S.sky||"sun"):"sun";
+  let h=`<header class="band stick ${bOpen?"":"closed"}">${GEAR}<img class="bm" src="img/minaret.svg" alt="">
     ${bOpen?`<span class="eyebrow">Jour du ${esc(dateStr)} · ${esc(placeName())}</span>
     <h1>${esc(cur.n)}</h1><span class="meta">${NP?`Prochaine prière : <b>${esc(NP[0])}</b> à ${hm(NP[1])}, dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span>`:""}</span>
     <div class="skytabs" role="tablist">${[["times","Horaires"],["sun","Soleil"],["moon","Lune"]].map(([k,n])=>`<button class="${sky===k?"on":""}" data-sky="${k}">${n}</button>`).join("")}</div>`
     :`<span class="bmini">${esc(cur.n)} · ${esc(placeName())}</span>`}
     ${sky==="times"?`<div class="times">${tl.map(([n,t,k])=>`<div class="${k===nextCell?"next":""}">${n}<b>${hm(k===nextCell&&NP?NP[1]:t)}</b>${k===nextCell&&NP?`<i data-cd="${NP[1].getTime()}">${until(NP[1])}</i>`:""}</div>`).join("")}</div>`
-      :(sky==="sun"?sunSVG(now,NP):moonPanel(now))}
+      :(sky==="sun"?`<div class="skywrap">${sunSVG(now,NP)}</div>`:moonPanel(now))}
     <button class="btog" id="btog" aria-expanded="${bOpen}" aria-label="${bOpen?"Replier":"Déplier"} le bandeau">${bOpen?"Replier ▴":"Soleil, lune ▾"}</button></header>`;
   if(D.friday){
     const fr=J.filter(x=>x.step==="vendredi");
@@ -607,12 +613,12 @@ function vChemin(){
     h+=`<div class="step ${state} ${p.p?"prayer":""}" id="st-${p.k}"><span class="dot"></span>
       <button class="sh" aria-expanded="${OPEN.has(p.k)}"><span class="tm">${hm(p.s)}</span><span class="ti">${esc(p.n)}${isNext?`<span class="nextb">prochaine · dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span></span>`:""}<span class="sub">${esc(subtitle||"Pas de pratique propre pour l'instant")}</span>${rakaBars(p.k)}</span>${CHEV}</button>
       <div class="sbody">${p.intro?`<p class="intro">${esc(p.intro)}</p>`:""}
-        ${items.length?`<div class="cards">${items.map(card).join("")}</div>`:""}
+        ${items.length?`<div class="cards">${items.map(x=>card(x,1)).join("")}</div>`:""}
         ${p.p&&SUNNA[p.k]?`<p class="intro"><b>Surérogatoires :</b> ${esc(SUNNA[p.k])}. <a href="#dhikr" data-nawafil>Détails</a></p>`:""}
         ${p.p?`<div class="row"><button class="btn primary" data-after>Après la prière</button><button class="btn gold" data-count="sunna">Compteur</button><button class="btn" data-howto>Comment prier</button></div>`:""}
         ${p.k==="coucher"?`<div class="row"><button class="btn gold" data-count="coucher">Compteur 33 · 33 · 34</button></div>`:""}
       </div></div>`;
-    if(i===D.cur)h+=`<div class="now nowsky" id="now"><div class="nowt" data-nowt>Maintenant · ${hm(now)}<span></span></div><div class="skycard">${sunSVG(now,NP)}</div></div>`;
+    if(i===D.cur)h+=`<div class="now nowsky" id="now"><div class="nowt" data-nowt>Maintenant · ${hm(now)}<span></span></div></div>`;
   });
   const finNext=NP&&NP[2]==="fin";
   h+=`<div class="step lvl${lvl(st.length)} ${finNext?"next":""}" id="st-fin"><span class="dot"></span><div class="sh" style="cursor:default"><span class="tm">${hm(T.maghrib)}</span><span class="ti">Maghrib${finNext?`<span class="nextb">prochaine · dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span></span>`:""}<span class="sub">Un nouveau jour commence</span></span><span></span></div></div></div>`;
@@ -636,7 +642,7 @@ function vChemin(){
 }
 let USERMOVED=false,HIDDENAT=0;
 function centerNow(force){if(view!=="chemin"||(USERMOVED&&!force))return;const n=document.getElementById("now");if(!n)return;
-  requestAnimationFrame(()=>{const a=n.getBoundingClientRect(),y=window.scrollY+a.top-52;window.scrollTo({top:Math.max(0,y)})})}
+  requestAnimationFrame(()=>{const a=n.getBoundingClientRect(),bd=document.querySelector(".band.stick"),y=window.scrollY+a.top-(bd?bd.offsetHeight:0)-44;window.scrollTo({top:Math.max(0,y)})})}
 ["touchstart","wheel","keydown"].forEach(ev=>addEventListener(ev,()=>{if(!document.querySelector(".splash"))USERMOVED=true},{passive:true}));
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")HIDDENAT=Date.now();else{if(HIDDENAT&&Date.now()-HIDDENAT>1800000)gcStart();if(HIDDENAT&&Date.now()-HIDDENAT>30000&&view==="chemin"){USERMOVED=false;route();}}});
 let SCROLLNEXT=true;
@@ -649,7 +655,7 @@ setInterval(()=>{
   const D=islamicDay(new Date());
   if(D.steps[D.cur].k!==LASTCUR&&!$dlg.innerHTML){vChemin();return}
   document.querySelectorAll("[data-cd]").forEach(e=>e.textContent=until(new Date(+e.dataset.cd)));
-  const nt=document.querySelector("#now [data-nowt]");if(nt)nt.firstChild.textContent="Maintenant · "+hm(new Date());const c=document.querySelector("#now .skycard");if(c)c.innerHTML=sunSVG(new Date(),NOWNP);
+  const nt=document.querySelector("#now [data-nowt]");if(nt)nt.firstChild.textContent="Maintenant · "+hm(new Date());const c=document.querySelector(".band .skywrap");if(c)c.innerHTML=sunSVG(new Date(),NOWNP);
 },30000);
 function openAfter(){
   const a=J.filter(x=>x.step==="apres");
