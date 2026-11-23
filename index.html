@@ -215,6 +215,33 @@ label{font-weight:600;font-size:14px;display:grid;gap:4px}
 .step.past{opacity:.42}
 .step.past .sh{box-shadow:none}
 .step.past .dot{background:var(--line);border-color:var(--line)}
+/* Chemine : prières en avant, actions et étapes passées amincies */
+.tl .step:not(.prayer) .sh{padding:3px 10px;grid-template-columns:40px 1fr auto;background:transparent;border-style:dashed}
+.tl .step:not(.prayer) .sh .ti{font-family:var(--body);font-size:13.5px}
+.tl .step:not(.prayer) .sh .tm{font-size:12.5px}
+.tl .step:not(.prayer) .sh .sub{font-size:10.5px}
+.tl .step:not(.prayer) .dot{top:8px}
+.tl .step.prayer .sh{padding:10px 12px;border-width:1.5px;grid-template-columns:50px 1fr auto}
+.tl .step.prayer .sh .ti{font-size:18px}
+.tl .step.prayer .sh .tm{font-size:15px}
+.tl .step.prayer.lvl0 .sh{padding:18px 14px;border-width:2.5px;grid-template-columns:60px 1fr auto}
+.tl .step.prayer.lvl0 .sh .ti{font-size:24px}
+.tl .step.prayer.lvl0 .sh .tm{font-size:19px}
+.tl .step.prayer.lvl0 .sh .sub{font-size:12.5px}
+.tl .step.prayer.lvl0 .rg .bars i{height:20px;width:5px}
+.tl .step.prayer.lvl0 .nextb{font-size:13px;padding:2px 9px}
+.tl .step.prayer.lvl0 .dot{top:22px;width:17px;height:17px;left:-27px}
+.tl .step.past{opacity:.5;margin-bottom:1px}
+.tl .step.past .sh{padding:1px 10px;border:none;background:transparent;box-shadow:none;grid-template-columns:40px 1fr auto}
+.tl .step.past .sh .ti{font-family:var(--body);font-size:12.5px}
+.tl .step.past .sh .tm{font-size:11.5px}
+.tl .step.past .sh .sub,.tl .step.past .rk,.tl .step.past .nextb{display:none}
+.tl .step.past .dot{width:9px;height:9px;left:-23px;top:6px}
+.tl .step.past.open .sh{background:var(--surface)}
+.now.nowsky{display:block;margin:8px 0 10px}
+.now.nowsky::before{top:50%;margin-top:-6px}
+.skycard{background:linear-gradient(160deg,var(--phase),#062A1C);border:1px solid var(--gold);border-radius:12px;padding:4px 6px 2px}
+.skycard svg{display:block;width:100%;height:auto}
 .fic{display:inline-grid;place-items:center;width:44px;height:44px;flex:none;background:var(--soft);border-radius:10px}
 .fic svg{width:40px;height:40px}
 .fsteps{display:flex;gap:6px;overflow-x:auto;margin:12px 0 4px;padding-bottom:4px}
@@ -558,7 +585,7 @@ function vChemin(){
     <div class="skytabs" role="tablist">${[["times","Horaires"],["sun","Soleil"],["moon","Lune"]].map(([k,n])=>`<button class="${sky===k?"on":""}" data-sky="${k}">${n}</button>`).join("")}</div>`
     :`<span class="bmini">${esc(cur.n)} · ${esc(placeName())}</span>`}
     ${sky==="times"?`<div class="times">${tl.map(([n,t,k])=>`<div class="${k===nextCell?"next":""}">${n}<b>${hm(k===nextCell&&NP?NP[1]:t)}</b>${k===nextCell&&NP?`<i data-cd="${NP[1].getTime()}">${until(NP[1])}</i>`:""}</div>`).join("")}</div>`
-      :(sky==="sun"?sunSVG(now):moonPanel(now))}
+      :(sky==="sun"?sunSVG(now,NP):moonPanel(now))}
     <button class="btog" id="btog" aria-expanded="${bOpen}" aria-label="${bOpen?"Replier":"Déplier"} le bandeau">${bOpen?"Replier ▴":"Soleil, lune ▾"}</button></header>`;
   if(D.friday){
     const fr=J.filter(x=>x.step==="vendredi");
@@ -568,7 +595,7 @@ function vChemin(){
   }
   const npKey=NP?NP[2]:null,iN=npKey==="fin"?st.length:st.findIndex(p=>p.k===npKey);
   if(npKey!==LASTNP){OPEN.clear();if(npKey&&npKey!=="fin")OPEN.add(npKey);LASTNP=npKey}
-  const lvl=i=>iN<0?1:Math.abs(i-iN)===0?0:Math.abs(i-iN)===1?1:2;
+  const lvl=i=>i===iN?0:1;NOWNP=NP;
   h+=`<div class="tl" id="tl"><div class="fill" id="fill"></div><div class="rest" id="rest"></div>`;
   st.forEach((p,i)=>{
     const items=J.filter(x=>x.step===p.k);
@@ -583,7 +610,7 @@ function vChemin(){
         ${p.p?`<div class="row"><button class="btn primary" data-after>Après la prière</button><button class="btn gold" data-count="sunna">Compteur</button><button class="btn" data-howto>Comment prier</button></div>`:""}
         ${p.k==="coucher"?`<div class="row"><button class="btn gold" data-count="coucher">Compteur 33 · 33 · 34</button></div>`:""}
       </div></div>`;
-    if(i===D.cur)h+=`<div class="now" id="now">Maintenant · ${hm(now)}<span></span></div>`;
+    if(i===D.cur)h+=`<div class="now nowsky" id="now"><div class="skycard">${sunSVG(now,NP)}</div></div>`;
   });
   const finNext=NP&&NP[2]==="fin";
   h+=`<div class="step lvl${lvl(st.length)} ${finNext?"next":""}" id="st-fin"><span class="dot"></span><div class="sh" style="cursor:default"><span class="tm">${hm(T.maghrib)}</span><span class="ti">Maghrib${finNext?`<span class="nextb">prochaine · dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span></span>`:""}<span class="sub">Un nouveau jour commence</span></span><span></span></div></div></div>`;
@@ -606,14 +633,12 @@ function vChemin(){
   if(SCROLLNEXT){SCROLLNEXT=false;USERMOVED=false;centerNow();setTimeout(centerNow,350);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(centerNow)}
 }
 let USERMOVED=false,HIDDENAT=0;
-function centerNow(force){if(view!=="chemin"||(USERMOVED&&!force))return;const t=document.querySelector(".step.lvl0");if(!t)return;
-  requestAnimationFrame(()=>{const h=t.querySelector(".sh")||t,a=h.getBoundingClientRect(),n=document.getElementById("now"),b=n?n.getBoundingClientRect():a,
-    top=Math.min(a.top,b.top),bot=Math.max(a.bottom,b.bottom),nav=document.querySelector("nav"),nb=nav?nav.offsetHeight:0,
-    y=window.scrollY+(top+bot)/2-(window.innerHeight-nb)/2;window.scrollTo({top:Math.max(0,y)})})}
+function centerNow(force){if(view!=="chemin"||(USERMOVED&&!force))return;const n=document.getElementById("now");if(!n)return;
+  requestAnimationFrame(()=>{const a=n.getBoundingClientRect(),y=window.scrollY+a.top-52;window.scrollTo({top:Math.max(0,y)})})}
 ["touchstart","wheel","keydown"].forEach(ev=>addEventListener(ev,()=>{if(!document.querySelector(".splash"))USERMOVED=true},{passive:true}));
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")HIDDENAT=Date.now();else{if(HIDDENAT&&Date.now()-HIDDENAT>1800000)gcStart();if(HIDDENAT&&Date.now()-HIDDENAT>30000&&view==="chemin"){USERMOVED=false;route();}}});
 let SCROLLNEXT=true;
-const OPEN=new Set();let LASTCUR=null,LASTNP=undefined;
+const OPEN=new Set();let LASTCUR=null,LASTNP=undefined,NOWNP=null;
 function placeFill(){const n=document.getElementById("now"),f=document.getElementById("fill"),r=document.getElementById("rest");if(n&&f){f.style.height=n.offsetTop+"px";if(r)r.style.top=(n.offsetTop+n.offsetHeight/2)+"px"}}
 function until(t,bare){const m=Math.max(0,Math.round((t-new Date())/60000)),d=Math.floor(m/1440),h=Math.floor(m%1440/60),r=(d?d+" j "+h+" h "+String(m%60).padStart(2,"0"):h?h+" h "+String(m%60).padStart(2,"0"):m+" min");return r}
 setInterval(()=>{
@@ -622,7 +647,7 @@ setInterval(()=>{
   const D=islamicDay(new Date());
   if(D.steps[D.cur].k!==LASTCUR&&!$dlg.innerHTML){vChemin();return}
   document.querySelectorAll("[data-cd]").forEach(e=>e.textContent=until(new Date(+e.dataset.cd)));
-  const n=document.getElementById("now");if(n)n.firstChild.textContent="Maintenant · "+hm(new Date());
+  const c=document.querySelector("#now .skycard");if(c)c.innerHTML=sunSVG(new Date(),NOWNP);
 },30000);
 function openAfter(){
   const a=J.filter(x=>x.step==="apres");
@@ -719,24 +744,26 @@ function sunAlt(date,hours,lat,lng){
   return asin(sin(lat)*sin(sp.decl)+cos(lat)*cos(sp.decl)*cos(H));
 }
 const hh0=t=>t.getHours()+t.getMinutes()/60;
-function sunSVG(now){
+function sunSVG(now,np){
   const [la,ln]=LL(),day=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-  const P=prayerTimes(day,la,ln,METHODS[S.method],S.asr);
-  const peak=Math.max(10,sunAlt(day,hh0(P.dhuhr),la,ln)),X=h=>10+h/24*340,Y=a=>a>0?58-a*(40/peak):58-Math.max(-40,a)*0.85;
+  const P=prayerTimes(day,la,ln,METHODS[S.method],S.asr),O=30,H=58+O;
+  const peak=Math.max(10,sunAlt(day,hh0(P.dhuhr),la,ln)),X=h=>10+h/24*340,Y=a=>a>0?H-a*(40/peak):H-Math.max(-40,a)*0.85;
   let d="";for(let m=0;m<=1440;m+=10){const h=m/60;d+=(m?"L":"M")+X(h).toFixed(1)+" "+Y(sunAlt(day,h,la,ln)).toFixed(1)}
   const hh=t=>t.getHours()+t.getMinutes()/60;
   const marks=[["Fajr",P.fajr],["Lever",P.sunrise],["Dhuhr",P.dhuhr],["Asr",P.asr],["Maghrib",P.maghrib],["Isha",P.isha]];
-  const nh=hh(now),na=sunAlt(day,nh,la,ln);
-  let g=`<svg viewBox="0 0 360 126" class="sky" role="img" aria-label="Course du soleil et horaires de prière">
-    <rect x="10" y="58" width="340" height="38" fill="rgba(0,0,0,.22)"/>
-    <line x1="10" y1="58" x2="350" y2="58" stroke="rgba(241,217,138,.55)" stroke-dasharray="3 3"/>
+  const nh=hh(now),na=sunAlt(day,nh,la,ln),nx=X(nh),F="Source Sans 3, sans-serif";
+  let g=`<svg viewBox="0 0 360 ${126+O}" class="sky" role="img" aria-label="Course du soleil, position actuelle et horaires de prière">
+    <rect x="10" y="${H}" width="340" height="38" fill="rgba(0,0,0,.22)"/>
+    <line x1="10" y1="${H}" x2="350" y2="${H}" stroke="rgba(241,217,138,.55)" stroke-dasharray="3 3"/>
     <path d="${d}" fill="none" stroke="#F1D98A" stroke-width="2"/>`;
-  marks.forEach(([n,t],i)=>{const x=X(hh(t)),y=Y(sunAlt(day,hh(t),la,ln)),ly=i%2===0?108:122,tx=Math.min(338,Math.max(22,x));
-    g+=`<line x1="${x}" y1="${y}" x2="${x}" y2="${ly-9}" stroke="rgba(241,217,138,.35)"/><circle cx="${x}" cy="${y}" r="3.2" fill="#0A3F2B" stroke="#F1D98A" stroke-width="1.5"/>
-      <text x="${tx}" y="${ly}" text-anchor="middle" font-size="9.5" fill="#fff" font-family="Source Sans 3, sans-serif">${n} <tspan fill="#F1D98A" font-weight="700">${hm(t)}</tspan></text>`});
-  g+=`<line x1="${X(nh)}" y1="12" x2="${X(nh)}" y2="96" stroke="rgba(255,255,255,.35)"/>
-    <circle cx="${X(nh)}" cy="${Y(na)}" r="7" fill="${na>0?"#FFD86B":"#8A8F7A"}" stroke="#fff" stroke-width="1.5"/>
-    <text x="${Math.min(330,Math.max(30,X(nh)))}" y="9" text-anchor="middle" font-size="9" fill="#F1D98A" font-family="Source Sans 3, sans-serif">maintenant</text></svg>`;
+  marks.forEach(([n,t],i)=>{const x=X(hh(t)),y=Y(sunAlt(day,hh(t),la,ln)),ly=(i%2===0?108:122)+O,tx=Math.min(338,Math.max(22,x)),isN=np&&n===np[0]&&Math.abs(np[1]-t)<36e5;
+    g+=`<line x1="${x}" y1="${y}" x2="${x}" y2="${ly-9}" stroke="rgba(241,217,138,${isN?.8:.35})"/><circle cx="${x}" cy="${y}" r="${isN?4.5:3.2}" fill="${isN?"#F1D98A":"#0A3F2B"}" stroke="#F1D98A" stroke-width="1.5"/>
+      <text x="${tx}" y="${ly}" text-anchor="middle" font-size="9.5" fill="#fff" font-family="${F}"${isN?' font-weight="700"':""}>${n} <tspan fill="#F1D98A" font-weight="700">${hm(t)}</tspan></text>`});
+  const lx=Math.min(318,Math.max(42,nx));
+  g+=`<line x1="${nx}" y1="${np?29:13}" x2="${nx}" y2="${96+O}" stroke="rgba(255,255,255,.45)"/>
+    <circle cx="${nx}" cy="${Y(na)}" r="7" fill="${na>0?"#FFD86B":"#8A8F7A"}" stroke="#fff" stroke-width="1.5"/>
+    <text x="${lx}" y="10" text-anchor="middle" font-size="9.5" fill="#F1D98A" font-family="${F}">maintenant · ${hm(now)}</text>
+    ${np?`<text x="${Math.min(296,Math.max(64,nx))}" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="${F}">${esc(np[0])} dans <tspan fill="#F1D98A" data-cd="${np[1].getTime()}">${until(np[1])}</tspan></text>`:""}</svg>`;
   return g;
 }
 const SYN=29.530588853,NEW0=Date.UTC(2000,0,6,18,14)/864e5;
