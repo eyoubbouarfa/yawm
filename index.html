@@ -52,7 +52,7 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 h1,h2,h3{font-family:var(--display);font-weight:400;text-wrap:balance;margin:0}
 .minaret{position:fixed;right:max(4px,calc(50% - 400px));bottom:64px;height:86%;opacity:var(--mina);pointer-events:none;z-index:0}
-.app{position:relative;z-index:1;max-width:680px;margin:0 auto;padding:0 16px calc(90px + env(safe-area-inset-bottom));padding-top:env(safe-area-inset-top)}
+.app{position:relative;z-index:1;max-width:680px;margin:0 auto;padding:0 16px calc(118px + env(safe-area-inset-bottom));padding-top:env(safe-area-inset-top)}
 /* Bandeau */
 .band{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--phase),#062A1C);color:#fff;margin:0 -16px;padding:14px 18px 12px;display:grid;gap:4px;border-bottom:3px solid var(--gold)}
 .gear{position:absolute;top:10px;right:12px;z-index:3;width:36px;height:36px;border-radius:50%;border:1px solid rgba(241,217,138,.5);background:rgba(0,0,0,.15);color:#F1D98A;display:grid;place-items:center}
@@ -157,6 +157,12 @@ h1,h2,h3{font-family:var(--display);font-weight:400;text-wrap:balance;margin:0}
 .tr{font-size:16px}
 /* Navigation */
 nav.bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:2px solid var(--gold);display:grid;grid-template-columns:repeat(6,1fr);padding-bottom:env(safe-area-inset-bottom);z-index:10}
+/* Ruban défilant */
+.tick{grid-column:1/-1;overflow:hidden;white-space:nowrap;height:28px;line-height:28px;background:linear-gradient(90deg,#0B4632,#0E6B47);color:#fff;font-size:13.5px;cursor:pointer;border-bottom:1px solid #A9852C;position:relative}
+.tick .tk{display:inline-block;will-change:transform;transform:translateX(100vw)}
+.tick b{color:#F1D98A;font-weight:700}
+.tick i{font-style:normal;opacity:.75;font-size:12px}
+.nsteps{margin:4px 0;padding-left:22px;display:grid;gap:6px}
 nav.bar a{display:grid;justify-items:center;gap:2px;padding:8px 0 7px;text-decoration:none;color:var(--muted);font-size:11px;font-weight:600}
 nav.bar a[aria-current="page"]{color:var(--accent)}
 nav.bar svg{width:22px;height:22px}
@@ -268,7 +274,7 @@ label{font-weight:600;font-size:14px;display:grid;gap:4px}
 .inst .go{width:100%;margin-top:10px}
 .inst .arrow{display:block;margin:8px auto 0;width:26px;height:26px;color:var(--gold);animation:bob 1.2s ease-in-out infinite}
 @keyframes bob{50%{transform:translateY(5px)}}
-.recbar{position:fixed;left:10px;right:10px;bottom:calc(66px + env(safe-area-inset-bottom));z-index:9;display:flex;align-items:center;gap:4px;background:var(--surface);border:1.5px solid var(--gold);border-radius:16px;padding:6px 8px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.recbar{position:fixed;left:10px;right:10px;bottom:calc(94px + env(safe-area-inset-bottom));z-index:9;display:flex;align-items:center;gap:4px;background:var(--surface);border:1.5px solid var(--gold);border-radius:16px;padding:6px 8px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
 .recbar .rb{background:none;border:none;color:var(--ink);font-size:18px;width:40px;height:40px;border-radius:12px;cursor:pointer}
 .recbar .rp{background:var(--accent);color:var(--surface);font-size:16px}
 .recbar .rr.on{background:var(--soft);color:var(--gold)}
@@ -371,6 +377,7 @@ details summary{cursor:pointer;font-weight:600}
 <img class="minaret" src="img/minaret.svg" alt="">
 <div class="app" id="app"><p class="loading">Chargement…</p></div>
 <nav class="bar" aria-label="Navigation principale">
+  <div class="tick" id="tick" role="button" tabindex="0" aria-live="off"><span class="tk" id="tk"></span></div>
   <a href="#chemin" data-v="chemin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="6" cy="12" r="2"/><path d="M6 7v3M6 14v3M11 5h9M11 12h9M11 19h6"/></svg>Chemine</a>
   <a href="#dhikr" data-v="dhikr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="4" r="1.6"/><circle cx="17.5" cy="6.5" r="1.6"/><circle cx="19.8" cy="12" r="1.6"/><circle cx="17.5" cy="17.5" r="1.6"/><circle cx="6.5" cy="6.5" r="1.6"/><circle cx="4.2" cy="12" r="1.6"/><circle cx="6.5" cy="17.5" r="1.6"/><path d="M12 18v4"/></svg>Dhikr</a>
   <a href="#jeune" data-v="jeune"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 3a8 8 0 1 0 5 14A9 9 0 0 1 16 3z"/><path d="M5 21h14"/></svg>Jeûne</a>
@@ -917,6 +924,51 @@ function bindNotif(){
   if(off)off.onclick=()=>{notifDisable().then(()=>vReglages())};
   if(te)te.onclick=()=>{m("Envoi d'une notification de test…");notifTest().then(()=>m("Notification de test envoyée.")).catch(e=>m(e.message))};
 }
+/* ---------- Ruban défilant (bas de chaque onglet) ---------- */
+const TICK_SPEED=55,TICK_PAUSE=1200;let TICKI=0,TICKANIM=null,TICKT=null;
+const notifActive=()=>!!(S.notifOn&&"Notification" in window&&Notification.permission==="granted");
+function nextWhite(){
+  const t0=new Date();t0.setHours(12,0,0,0);
+  for(let k=0;k<35;k++){const d=new Date(t0.getFullYear(),t0.getMonth(),t0.getDate()+k),h=hijri(d);if(!h||h.m===9)continue;
+    const first=h.m===12?14:13;
+    if(h.d>=first&&h.d<=15){const start=new Date(d.getFullYear(),d.getMonth(),d.getDate()-(h.d-first));return{d:start,h,first,now:k===0||start<=t0}}}
+  return null;
+}
+function tickMsgs(){
+  const L=[],fd=d=>d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+  if(notifSupport()!=="off"&&!notifActive())L.push({h:`<b>Profite des notifications</b> · les prières à l'heure, les jeûnes du lundi, du jeudi et des jours blancs rappelés la veille au Maghrib · <b>Touche ici pour les activer et faire le test</b>`,a:openNotifSheet});
+  const w=nextWhite();
+  if(w){const span=w.first===14?"14 et 15":"13, 14 et 15",when=w.now?"en ce moment":"à partir du "+fd(w.d);
+    L.push({h:`<b>Jours blancs</b> · les ${span} ${HMONTHS[w.h.m-1]}, ${when} · « Lorsque tu jeûnes trois jours dans le mois, jeûne le treize, le quatorze et le quinze ! » <i>(Ibn Mâjah, bon)</i> · Trois jours par mois valent le jeûne de toute l'année <i>(Sahîh al-Bukhârî n° 1976)</i>`,a:()=>{location.hash="#jeune"}})}
+  const t=new Date();let n=null;for(let k=1;k<=7&&!n;k++){const d=new Date(t.getFullYear(),t.getMonth(),t.getDate()+k);if(d.getDay()===1||d.getDay()===4)n=d}
+  L.push({h:`<b>Lundi et jeudi</b> · prochain jeûne ${n?"le "+fd(n):""} · « Les œuvres sont présentées le lundi et le jeudi, et j’aime que mes œuvres soient présentées alors que je jeûne. » <i>(At-Tirmidhî, Muslim, authentique)</i>`,a:()=>{location.hash="#jeune"}});
+  return L;
+}
+function tickRun(){
+  clearTimeout(TICKT);const box=document.getElementById("tick"),tk=document.getElementById("tk");if(!box||!tk)return;
+  const L=tickMsgs(),m=L[TICKI%L.length];TICKI++;
+  tk.innerHTML=m.h;box.onclick=m.a;box.onkeydown=e=>{if(e.key==="Enter")m.a()};
+  const W=box.clientWidth,T=tk.scrollWidth;
+  if(TICKANIM)TICKANIM.cancel();
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches){tk.style.transform="translateX(8px)";TICKT=setTimeout(tickRun,9000);return}
+  TICKANIM=tk.animate([{transform:`translateX(${W}px)`},{transform:`translateX(${-T}px)`}],{duration:(W+T)/TICK_SPEED*1000,easing:"linear",fill:"forwards"});
+  TICKANIM.onfinish=()=>{TICKT=setTimeout(tickRun,TICK_PAUSE)};
+}
+function openNotifSheet(){
+  const st=notifSupport();
+  let h=`<h2>Profite des notifications</h2><p>Les prières à l'heure, et la veille au Maghrib les jeûnes du lundi, du jeudi et des jours blancs. Elles arrivent même appli fermée.</p>`;
+  if(st==="ios")h+=`<ol class="nsteps"><li>Dans Safari, touche le bouton <b>Partager</b>.</li><li>Choisis <b>« Sur l'écran d'accueil »</b>.</li><li>Ouvre l'appli depuis cette nouvelle icône, puis touche à nouveau ce ruban.</li></ol>`;
+  else if(st==="no")h+=`<p>Ce navigateur ne permet pas les notifications. Installe l'appli sur l'écran d'accueil et ouvre-la depuis son icône.</p>`;
+  else h+=`<ol class="nsteps"><li>Touche <b>Activer</b>.</li><li>Le téléphone demande l'autorisation : touche <b>Autoriser</b>.</li><li>Touche <b>Tester</b> : une notification arrive en quelques secondes.</li></ol>
+    <div class="row"><button class="btn primary" id="nsa">${notifActive()?"Activées":"Activer"}</button><button class="btn gold" id="nst">Tester</button></div>
+    <p class="src" id="nsm" style="margin:0"></p><p class="src" style="margin:0">Tu choisis les rappels dans Réglages, rubrique Notifications.</p>`;
+  sheet(h);
+  const m=t=>{const e=document.getElementById("nsm");if(e)e.textContent=t},a=document.getElementById("nsa"),b=document.getElementById("nst");
+  if(a)a.onclick=()=>{if(notifActive()){m("Les notifications sont déjà activées. Touche Tester.");return}m("Activation…");notifEnable().then(()=>{a.textContent="Activées";m("C'est fait. Touche Tester pour vérifier.")}).catch(e=>m(e.message))};
+  if(b)b.onclick=()=>{m("Envoi d'une notification de test…");notifTest().then(()=>m("Notification de test envoyée : elle arrive dans quelques secondes.")).catch(e=>m(e.message))};
+}
+setTimeout(tickRun,1500);
+addEventListener("resize",()=>{clearTimeout(window.__tkr);window.__tkr=setTimeout(()=>{TICKI=Math.max(0,TICKI-1);tickRun()},400)});
 /* ---------- Rappels : fichiers calendrier (.ics) ---------- */
 const ICS_KINDS={
   prieres:{n:"Prières",d:"Les cinq prières à l'heure, avec les invocations d'après la prière."},
