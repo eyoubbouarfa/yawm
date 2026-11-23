@@ -247,6 +247,18 @@ label{font-weight:600;font-size:14px;display:grid;gap:4px}
 .now.nowsky{display:block;margin:6px 0 8px}
 .band.stick.closed{position:sticky;top:0;z-index:5}
 .band .skywrap svg{display:block;width:100%;height:auto;max-height:30vh}
+.band.closed{padding-top:8px;padding-bottom:4px;gap:0;border-bottom-width:2px}
+.band.closed .skywrap svg{max-height:none}
+.allday{margin:22px 2px 6px;opacity:.85}
+.allday h4{font-family:var(--body);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+.allday .adr{display:grid;gap:1px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:7px 2px;color:inherit;cursor:pointer}
+.allday .adr .t{font-size:13.5px;font-weight:600}
+.allday .adr .ph{font-size:13px;font-style:italic;color:var(--gold)}
+.allday .adr .g{font-size:11px;color:var(--muted)}
+.brow{display:flex;align-items:center;gap:8px;padding-right:40px;min-height:28px}
+.brow .bmini{padding-right:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.brow .btog{margin:0;flex:none;font-size:11px;padding:1px 9px}
+.band.closed .gear{top:4px;width:30px;height:30px}
 .tl .card.mini{padding:6px 10px;gap:2px;border-radius:8px}
 .tl .card.mini .t{font-size:14px;font-weight:600;line-height:1.25}
 .tl .card.mini .pill{font-size:10.5px;padding:1px 6px}
@@ -496,6 +508,7 @@ const cache={};
 function load(name){if(!cache[name])cache[name]=fetch("data/"+name+".json").then(r=>{if(!r.ok)throw new Error(name);return r.json()});return cache[name]}
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const nl=s=>esc(s).replace(/\n/g,"<br>");
+const PHON={"2137":"Subhâna-llâh, al-hamdu li-llâh, lâ ilâha illa-llâh, Allâhu akbar","5516":"Subhâna-llâhi wa bi-hamdih · cent fois","5507":"Subhâna-llâhi wa bi-hamdih, subhâna-llâhi-l-'azîm","3150":"Allâhumma innî a'ûdhu bika mina-l-khubuthi wa-l-khabâ'ith","4209":"Bismi-llâh · en cas d'oubli : Bismi-llâhi awwalahu wa âkhirah","5798":"Al-hamdu li-llâh"};
 const clean=s=>String(s||"").replace(/[\[\]]/g,"");
 const gradeCls=g=>/Authentique|Bon/.test(g||"")?"ok":"warn";
 const CHEV='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>';
@@ -599,10 +612,10 @@ function vChemin(){
     ${bOpen?`<span class="eyebrow">Jour du ${esc(dateStr)} · ${esc(placeName())}</span>
     <h1>${esc(cur.n)}</h1><span class="meta">${NP?`Prochaine prière : <b>${esc(NP[0])}</b> à ${hm(NP[1])}, dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span>`:""}</span>
     <div class="skytabs" role="tablist">${[["times","Horaires"],["sun","Soleil"],["moon","Lune"]].map(([k,n])=>`<button class="${sky===k?"on":""}" data-sky="${k}">${n}</button>`).join("")}</div>`
-    :`<span class="bmini">${esc(cur.n)} · ${esc(placeName())}</span>`}
+    :`<div class="brow"><span class="bmini">${esc(cur.n)} · ${esc(placeName())}</span><button class="btog" id="btog" aria-expanded="false" aria-label="Déplier le bandeau">Soleil, lune ▾</button></div>`}
     ${sky==="times"?`<div class="times">${tl.map(([n,t,k])=>`<div class="${k===nextCell?"next":""}">${n}<b>${hm(k===nextCell&&NP?NP[1]:t)}</b>${k===nextCell&&NP?`<i data-cd="${NP[1].getTime()}">${until(NP[1])}</i>`:""}</div>`).join("")}</div>`
-      :(sky==="sun"?`<div class="skywrap">${sunSVG(now,NP)}</div>`:moonPanel(now))}
-    <button class="btog" id="btog" aria-expanded="${bOpen}" aria-label="${bOpen?"Replier":"Déplier"} le bandeau">${bOpen?"Replier ▴":"Soleil, lune ▾"}</button></header>`;
+      :(sky==="sun"?`<div class="skywrap" data-mini="${bOpen?0:1}">${bOpen?sunSVG(now,NP):sunMini(now,NP)}</div>`:moonPanel(now))}
+    ${bOpen?`<button class="btog" id="btog" aria-expanded="true" aria-label="Replier le bandeau">Replier ▴</button>`:""}</header>`;
   if(D.friday){
     const fr=J.filter(x=>x.step==="vendredi");
     h+=`<div class="friday"><div><strong>Vendredi</strong> · du jeudi au Maghrib au vendredi au Maghrib. Lire la sourate Al-Kahf en entier, et retenir ses dix premiers versets.</div>
@@ -633,9 +646,9 @@ function vChemin(){
   const finNext=NP&&NP[2]==="fin";
   h+=`<div class="step prayer lvl${lvl(st.length)} ${finNext?"next":""}" id="st-fin"><span class="dot"></span><div class="sh" style="cursor:default"><span class="tm">${hm(T.maghrib)}</span><span class="ti">Maghrib${finNext?`<span class="nextb">prochaine · dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span></span>`:""}<span class="sub">Un nouveau jour commence</span></span><span></span></div></div></div>`;
   const all=J.filter(x=>x.step==="journee");
-  h+=`<div class="box"><h3>Tout au long de la journée</h3><div class="cards">${all.map(card).join("")}</div></div>
-    <p class="src rkleg" style="margin-top:14px"><span class="rg fard"><span class="bars"><i></i></span></span> obligatoire <span class="rg sun"><span class="bars"><i></i></span></span> surérogatoire régulière <span class="rg opt"><span class="bars"><i></i></span></span> recommandée <span class="rg wit"><span class="bars"><i></i></span></span> Shaf' et Witr</p>
-    <p class="src" style="margin-top:6px">Horaires pour ${esc(placeName())}, méthode ${esc(METHODS[S.method].n)}. Bordure dorée : texte arabe du recueil d'origine. Bordure orange : référence encore à vérifier.</p>`;
+  h+=`<p class="src rkleg" style="margin-top:14px"><span class="rg fard"><span class="bars"><i></i></span></span> obligatoire <span class="rg sun"><span class="bars"><i></i></span></span> surérogatoire régulière <span class="rg opt"><span class="bars"><i></i></span></span> recommandée <span class="rg wit"><span class="bars"><i></i></span></span> Shaf' et Witr</p>
+    <p class="src" style="margin-top:6px">Horaires pour ${esc(placeName())}, méthode ${esc(METHODS[S.method].n)}. Bordure dorée : texte arabe du recueil d'origine. Bordure orange : référence encore à vérifier.</p>
+    <div class="allday"><h4>Tout au long de la journée</h4>${all.map(x=>{const i=J.indexOf(x),ph=PHON[x.id||x.num]||"";return `<button class="adr" data-j="${i}"><span class="t">${esc(x.s)}</span>${ph?`<span class="ph">${esc(ph)}</span>`:""}<span class="g">${esc(clean(x.g).replace(/\s*\(.*\)/,""))}</span></button>`}).join("")}</div>`;
   $app.innerHTML=h;
   bindCards($app);
   $app.querySelectorAll("[data-sky]").forEach(e=>e.onclick=()=>{S.sky=e.dataset.sky;save();vChemin()});
@@ -669,7 +682,7 @@ setInterval(()=>{
   if((cs.k!==LASTCUR||g!==FOCUSGRACE)&&!$dlg.innerHTML){SCROLLNEXT=!USERMOVED;vChemin();return}
   document.querySelectorAll("[data-since]").forEach(e=>e.textContent=since(new Date(+e.dataset.since)));
   document.querySelectorAll("[data-cd]").forEach(e=>e.textContent=until(new Date(+e.dataset.cd)));
-  const nt=document.querySelector("#now [data-nowt]");if(nt)nt.firstChild.textContent="Maintenant · "+hm(new Date());const c=document.querySelector(".band .skywrap");if(c)c.innerHTML=sunSVG(new Date(),NOWNP);
+  const nt=document.querySelector("#now [data-nowt]");if(nt)nt.firstChild.textContent="Maintenant · "+hm(new Date());const c=document.querySelector(".band .skywrap");if(c)c.innerHTML=c.dataset.mini==="1"?sunMini(new Date(),NOWNP):sunSVG(new Date(),NOWNP);
 },30000);
 function openAfter(){
   const a=J.filter(x=>x.step==="apres");
@@ -786,6 +799,22 @@ function sunSVG(now,np){
     <circle cx="${nx}" cy="${Y(na)}" r="7" fill="${na>0?"#FFD86B":"#8A8F7A"}" stroke="#fff" stroke-width="1.5"/>
     <text x="${lx}" y="10" text-anchor="middle" font-size="9.5" fill="#F1D98A" font-family="${F}">maintenant · ${hm(now)}</text>
     ${np?`<text x="${Math.min(296,Math.max(64,nx))}" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="${F}">${esc(np[0])} dans <tspan fill="#F1D98A" data-cd="${np[1].getTime()}">${until(np[1])}</tspan></text>`:""}</svg>`;
+  return g;
+}
+function sunMini(now,np){
+  const [la,ln]=LL(),day=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const P=prayerTimes(day,la,ln,METHODS[S.method],S.asr),H=48;
+  const peak=Math.max(10,sunAlt(day,hh0(P.dhuhr),la,ln)),X=h=>8+h/24*344,Y=a=>a>0?H-a*(27/peak):H-Math.max(-40,a)*0.3;
+  let d="";for(let m=0;m<=1440;m+=12){const h=m/60;d+=(m?"L":"M")+X(h).toFixed(1)+" "+Y(sunAlt(day,h,la,ln)).toFixed(1)}
+  const hh=t=>t.getHours()+t.getMinutes()/60,nh=hh(now),na=sunAlt(day,nh,la,ln),nx=X(nh),F="Source Sans 3, sans-serif";
+  let g=`<svg viewBox="0 0 360 64" class="sky mini" role="img" aria-label="Course du soleil et prochaine prière">
+    <line x1="8" y1="${H}" x2="352" y2="${H}" stroke="rgba(241,217,138,.45)" stroke-dasharray="3 3"/>
+    <path d="${d}" fill="none" stroke="#F1D98A" stroke-width="1.6" opacity=".9"/>`;
+  [P.fajr,P.dhuhr,P.asr,P.maghrib,P.isha].forEach(t=>{const isN=np&&Math.abs(np[1]-t)<6e4;g+=`<circle cx="${X(hh(t))}" cy="${Y(sunAlt(day,hh(t),la,ln))}" r="${isN?3.6:2.4}" fill="${isN?"#F1D98A":"#0A3F2B"}" stroke="#F1D98A" stroke-width="1.2"/>`});
+  const tx=Math.min(262,Math.max(98,nx));
+  g+=`<line x1="${nx}" y1="16" x2="${nx}" y2="62" stroke="rgba(255,255,255,.35)"/>
+    <circle cx="${nx}" cy="${Y(na)}" r="5.5" fill="${na>0?"#FFD86B":"#8A8F7A"}" stroke="#fff" stroke-width="1.3"/>
+    <text x="${tx}" y="11" text-anchor="middle" font-size="11.5" fill="#fff" font-family="${F}"><tspan fill="#F1D98A">${hm(now)}</tspan>${np?` · <tspan font-weight="700">${esc(np[0])}</tspan> dans <tspan font-weight="700" fill="#F1D98A" data-cd="${np[1].getTime()}">${until(np[1])}</tspan>`:""}</text></svg>`;
   return g;
 }
 const SYN=29.530588853,NEW0=Date.UTC(2000,0,6,18,14)/864e5;
