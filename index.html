@@ -826,7 +826,7 @@ function whiteBlock(now,onDark){
     <div class="wst">${status}</div><div class="wn">La récompense d'une année de jeûne est promise pour les trois jours accomplis. Allah seul sait.</div></div>`;
 }
 /* ---------- Notifications (Web Push via le serveur Yawm) ---------- */
-const PUSH_URL="";/* adresse du serveur Cloudflare, ex. https://yawm-notifs.xxx.workers.dev */
+const PUSH_URL="https://yawm-notifs.reflexions-sami.workers.dev";/* adresse du serveur Cloudflare, ex. https://yawm-notifs.xxx.workers.dev */
 const NOTIF_KINDS={pri:["Prières","À l'heure de chaque prière obligatoire."],lj:["Jeûne du lundi et du jeudi","La veille, au Maghrib."],blanc:["Jours blancs","Trois jours, deux jours puis la veille, au Maghrib."]};
 function notifOpts(){return Object.assign({pri:true,lj:true,blanc:true},S.notif||{})}
 function notifEvents(nDays){
