@@ -876,15 +876,19 @@ function notifSupport(){
 }
 const notifKey=()=>JSON.stringify([LL(),S.method,S.asr,notifOpts(),S.hsrc,S.hAdj||0,S.hOff||0]);
 async function pushPost(path,data){const r=await fetch(PUSH_URL+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(data)});if(!r.ok)throw new Error("serveur "+r.status);return r.json()}
+let PUSHING=null;
 async function pushSync(force){
-  try{
+  if(PUSHING){await PUSHING.catch(()=>{});if(!force)return}
+  PUSHING=(async()=>{try{
     if(!S.notifOn||notifSupport()!=="ok"||Notification.permission!=="granted")return;
     const k=notifKey();if(!force&&S.pushKey===k&&Date.now()-(S.pushAt||0)<20*3600000)return;
     const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
     if(!sub){S.notifOn=false;save();return}
-    await pushPost("/schedule",{sub:sub.toJSON(),events:notifEvents(30)});
-    S.pushKey=k;S.pushAt=Date.now();save();
-  }catch(e){}
+    const ev=notifEvents(30),res=await pushPost("/schedule",{sub:sub.toJSON(),events:ev});
+    const nx=ev.slice().sort((a,b)=>a.t-b.t)[0];
+    S.pushKey=k;S.pushAt=Date.now();S.pushN=res&&res.n||ev.length;S.pushNext=nx?[nx.t,nx.ti]:null;save();
+  }catch(e){S.pushErr=String(e&&e.message||e);save()}})();
+  try{await PUSHING}finally{PUSHING=null}
 }
 async function notifEnable(){
   const perm=await Notification.requestPermission();
@@ -908,7 +912,7 @@ function notifBox(){
   const o=notifOpts(),on=S.notifOn&&st==="ok"&&Notification.permission==="granted";
   const msg=st==="ios"?"Sur iPhone, ajoute d'abord l'appli à l'écran d'accueil (Partager, puis « Sur l'écran d'accueil »), puis ouvre-la depuis l'icône."
     :st==="no"?"Ce navigateur ne permet pas les notifications. Ouvre l'appli installée sur l'écran d'accueil."
-    :on?"Activées pour "+esc(placeName())+". Elles arrivent même appli fermée, avec le son de notification du téléphone."
+    :on?"Activées pour "+esc(placeName())+". Elles arrivent même appli fermée, avec le son de notification du téléphone."+(S.pushAt?` Rappels remis au serveur le ${new Date(S.pushAt).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})} (${S.pushN||"?"} rappels)${S.pushNext&&S.pushNext[0]>Date.now()?`, prochain : ${esc(S.pushNext[1])}`:""}.`:" Rappels pas encore remis au serveur : touche Tester puis rouvre l'appli.")
     :"Désactivées.";
   return `<div class="box"><h3>Notifications</h3>
     <p style="margin:0" id="ntst">${msg}</p>
