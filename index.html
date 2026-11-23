@@ -936,14 +936,12 @@ function nextWhite(){
 }
 function tickMsgs(){
   const L=[],fd=d=>d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
-  if(notifSupport()!=="off"&&!notifActive())L.push({h:`<b>Profite des notifications</b> · les prières à l'heure, les jeûnes du lundi, du jeudi et des jours blancs rappelés la veille au Maghrib · <b>Touche ici pour les activer et faire le test</b>`,a:openNotifSheet});
+  if(notifSupport()!=="off")L.push({h:`<b>Profite des notifications</b> · les prières à l'heure, les jeûnes du lundi, du jeudi et des jours blancs rappelés la veille au Maghrib · <b>Touche ici pour les activer et faire le test</b>`,a:openNotifSheet});
   const w=nextWhite();
   if(w){const span=w.first===14?"14 et 15":"13, 14 et 15",when=w.now?"en ce moment":"à partir du "+fd(w.d);
     L.push({h:`<b>Jours blancs</b> · les ${span} ${HMONTHS[w.h.m-1]}, ${when} · « Lorsque tu jeûnes trois jours dans le mois, jeûne le treize, le quatorze et le quinze ! » <i>(Ibn Mâjah, bon)</i> · Trois jours par mois valent le jeûne de toute l'année <i>(Sahîh al-Bukhârî n° 1976)</i>`,a:()=>{location.hash="#jeune"}})}
   const t=new Date();let n=null;for(let k=1;k<=7&&!n;k++){const d=new Date(t.getFullYear(),t.getMonth(),t.getDate()+k);if(d.getDay()===1||d.getDay()===4)n=d}
   L.push({h:`<b>Lundi et jeudi</b> · prochain jeûne ${n?"le "+fd(n):""} · « Les œuvres sont présentées le lundi et le jeudi, et j’aime que mes œuvres soient présentées alors que je jeûne. » <i>(At-Tirmidhî, Muslim, authentique)</i>`,a:()=>{location.hash="#jeune"}});
-  /* priorité aux notifications : elles reviennent entre chaque autre message */
-  if(L.length>2&&L[0].a===openNotifSheet){const N=L[0],R=L.slice(1);return R.flatMap(m=>[N,m])}
   return L;
 }
 function tickRun(){
@@ -969,7 +967,8 @@ function openNotifSheet(){
   if(a)a.onclick=()=>{if(notifActive()){m("Les notifications sont déjà activées. Touche Tester.");return}m("Activation…");notifEnable().then(()=>{a.textContent="Activées";m("C'est fait. Touche Tester pour vérifier.")}).catch(e=>m(e.message))};
   if(b)b.onclick=()=>{m("Envoi d'une notification de test…");notifTest().then(()=>m("Notification de test envoyée : elle arrive dans quelques secondes.")).catch(e=>m(e.message))};
 }
-setTimeout(tickRun,1500);
+(function tickStart(){if(document.querySelector(".splash:not(.out)")||document.hidden){setTimeout(tickStart,300);return}TICKI=0;tickRun()})();
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){TICKI=0;tickRun()}});
 addEventListener("resize",()=>{clearTimeout(window.__tkr);window.__tkr=setTimeout(()=>{TICKI=Math.max(0,TICKI-1);tickRun()},400)});
 /* ---------- Rappels : fichiers calendrier (.ics) ---------- */
 const ICS_KINDS={
