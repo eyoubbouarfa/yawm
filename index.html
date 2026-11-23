@@ -880,7 +880,7 @@ function notifEvents(nDays){
   const day=(d,k)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+k);
   for(let i=0;i<nDays;i++){
     const d=day(t0,i),P=prayerTimes(d,la,ln,m,S.asr);
-    if(o.pri)[["Fajr",P.fajr],["Dhuhr",P.dhuhr],["Asr",P.asr],["Maghrib",P.maghrib],["Isha",P.isha]].forEach(([n,t])=>add(t,`${n} · ${hm(t)}`,`L'heure de la prière ${/^[AEIOU]/.test(n)?"d'":"de "}${n} est entrée.`,"pri"));
+    if(o.pri)[["Fajr",P.fajr],["Dhuhr",P.dhuhr],["Asr",P.asr],["Maghrib",P.maghrib],["Isha",P.isha]].forEach(([n,t])=>add(t,`${n} · ${hm(t)}`,"","pri"));
     const tm=day(d,1),ht=hijri(tm),N=prayerTimes(tm,la,ln,m,S.asr),dows=[];
     if(o.lj&&!forbidden(ht)){if(tm.getDay()===1)dows.push("lundi");if(tm.getDay()===4)dows.push("jeudi")}
     let white=null;
@@ -910,7 +910,7 @@ function notifSupport(){
   }
   return "ok";
 }
-const notifKey=()=>JSON.stringify([LL(),S.method,S.asr,notifOpts(),S.hsrc,S.hAdj||0,S.hOff||0]);
+const notifKey=()=>JSON.stringify([2,LL(),S.method,S.asr,notifOpts(),S.hsrc,S.hAdj||0,S.hOff||0]);
 async function pushPost(path,data){const r=await fetch(PUSH_URL+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(data)});if(!r.ok)throw new Error("serveur "+r.status);return r.json()}
 let PUSHING=null;
 async function pushSync(force){
