@@ -610,8 +610,10 @@ function vChemin(){
       <details><summary>Les pratiques du vendredi (${fr.length})</summary><div class="cards" style="margin-top:8px">${fr.map(card).join("")}</div></details></div>`;
   }
   const npKey=NP?NP[2]:null,iN=npKey==="fin"?st.length:st.findIndex(p=>p.k===npKey);
-  if(npKey!==LASTNP){OPEN.clear();if(npKey&&npKey!=="fin")OPEN.add(npKey);LASTNP=npKey}
-  const lvl=i=>i===iN?0:1;NOWNP=NP;
+  const cs=st[D.cur],grace=!!(cs&&cs.p&&now-cs.s<GRACE_MS),iF=grace?D.cur:iN,fKey=grace?cs.k:npKey;
+  if(fKey!==LASTNP){OPEN.clear();if(fKey&&fKey!=="fin")OPEN.add(fKey);LASTNP=fKey}
+  FOCUSGRACE=grace;
+  const lvl=i=>i===iF?0:1;NOWNP=NP;
   h+=`<div class="tl" id="tl"><div class="fill" id="fill"></div><div class="rest" id="rest"></div>`;
   st.forEach((p,i)=>{
     const items=J.filter(x=>x.step===p.k);
@@ -619,7 +621,7 @@ function vChemin(){
     const state=(i<D.cur?"past":i===D.cur?"cur":"")+(isNext?" next":"")+(OPEN.has(p.k)?" open":"")+" lvl"+lvl(i);
     const subtitle=[items.length?items.length+" pratique"+(items.length>1?"s":""):"",p.p?"prière obligatoire":""].filter(Boolean).join(" · ");
     h+=`<div class="step ${state} ${p.p?"prayer":""}" id="st-${p.k}"><span class="dot"></span>
-      <button class="sh" aria-expanded="${OPEN.has(p.k)}"><span class="tm">${hm(p.s)}</span><span class="ti">${esc(p.n)}${isNext?`<span class="nextb">prochaine · dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span></span>`:""}<span class="sub">${esc(subtitle||"Pas de pratique propre pour l'instant")}</span>${rakaBars(p.k)}</span>${CHEV}</button>
+      <button class="sh" aria-expanded="${OPEN.has(p.k)}"><span class="tm">${hm(p.s)}</span><span class="ti">${esc(p.n)}${grace&&i===D.cur?`<span class="nextb">entrée · depuis <span data-since="${p.s.getTime()}">${since(p.s)}</span></span>`:""}${isNext?`<span class="nextb">prochaine · dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span></span>`:""}<span class="sub">${esc(subtitle||"Pas de pratique propre pour l'instant")}</span>${rakaBars(p.k)}</span>${CHEV}</button>
       <div class="sbody">${p.intro?`<p class="intro">${esc(p.intro)}</p>`:""}
         ${items.length?`<div class="cards">${items.map(x=>card(x,1)).join("")}</div>`:""}
         ${p.p&&SUNNA[p.k]?`<p class="intro"><b>Surérogatoires :</b> ${esc(SUNNA[p.k])}. <a href="#dhikr" data-nawafil>Détails</a></p>`:""}
@@ -629,7 +631,7 @@ function vChemin(){
     if(i===D.cur)h+=`<div class="now nowsky" id="now"><div class="nowt" data-nowt>Maintenant · ${hm(now)}<span></span></div></div>`;
   });
   const finNext=NP&&NP[2]==="fin";
-  h+=`<div class="step lvl${lvl(st.length)} ${finNext?"next":""}" id="st-fin"><span class="dot"></span><div class="sh" style="cursor:default"><span class="tm">${hm(T.maghrib)}</span><span class="ti">Maghrib${finNext?`<span class="nextb">prochaine · dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span></span>`:""}<span class="sub">Un nouveau jour commence</span></span><span></span></div></div></div>`;
+  h+=`<div class="step prayer lvl${lvl(st.length)} ${finNext?"next":""}" id="st-fin"><span class="dot"></span><div class="sh" style="cursor:default"><span class="tm">${hm(T.maghrib)}</span><span class="ti">Maghrib${finNext?`<span class="nextb">prochaine · dans <span data-cd="${NP[1].getTime()}">${until(NP[1])}</span></span>`:""}<span class="sub">Un nouveau jour commence</span></span><span></span></div></div></div>`;
   const all=J.filter(x=>x.step==="journee");
   h+=`<div class="box"><h3>Tout au long de la journée</h3><div class="cards">${all.map(card).join("")}</div></div>
     <p class="src rkleg" style="margin-top:14px"><span class="rg fard"><span class="bars"><i></i></span></span> obligatoire <span class="rg sun"><span class="bars"><i></i></span></span> surérogatoire régulière <span class="rg opt"><span class="bars"><i></i></span></span> recommandée <span class="rg wit"><span class="bars"><i></i></span></span> Shaf' et Witr</p>
@@ -649,19 +651,23 @@ function vChemin(){
   if(SCROLLNEXT){SCROLLNEXT=false;USERMOVED=false;centerNow();setTimeout(centerNow,350);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(centerNow)}
 }
 let USERMOVED=false,HIDDENAT=0;
-function centerNow(force){if(view!=="chemin"||(USERMOVED&&!force))return;const n=document.getElementById("now");if(!n)return;
+function centerNow(force){if(view!=="chemin"||(USERMOVED&&!force))return;const n=FOCUSGRACE?document.querySelector(".tl .step.lvl0"):document.getElementById("now");if(!n)return;
   requestAnimationFrame(()=>{const a=n.getBoundingClientRect(),bd=document.querySelector(".band.stick.closed"),y=window.scrollY+a.top-(bd?bd.offsetHeight:0)-44;window.scrollTo({top:Math.max(0,y)})})}
 ["touchstart","wheel","keydown"].forEach(ev=>addEventListener(ev,()=>{if(!document.querySelector(".splash"))USERMOVED=true},{passive:true}));
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")HIDDENAT=Date.now();else{if(HIDDENAT&&Date.now()-HIDDENAT>1800000)gcStart();if(HIDDENAT&&Date.now()-HIDDENAT>30000&&view==="chemin"){USERMOVED=false;route();}}});
 let SCROLLNEXT=true;
-const OPEN=new Set();let LASTCUR=null,LASTNP=undefined,NOWNP=null;
+const OPEN=new Set();let LASTCUR=null,LASTNP=undefined,NOWNP=null,FOCUSGRACE=false;
+const GRACE_MS=30*60000;
+function since(t){const m=Math.max(0,Math.floor((new Date()-t)/60000));return m<1?"à l'instant":m+" min"}
 function placeFill(){const n=document.getElementById("now"),f=document.getElementById("fill"),r=document.getElementById("rest");if(n&&f){f.style.height=n.offsetTop+"px";if(r)r.style.top=(n.offsetTop+n.offsetHeight/2)+"px"}}
 function until(t,bare){const m=Math.max(0,Math.round((t-new Date())/60000)),d=Math.floor(m/1440),h=Math.floor(m%1440/60),r=(d?d+" j "+h+" h "+String(m%60).padStart(2,"0"):h?h+" h "+String(m%60).padStart(2,"0"):m+" min");return r}
 setInterval(()=>{
   document.querySelectorAll("[data-cd]").forEach(e=>e.textContent=until(new Date(+e.dataset.cd)));
   if(view!=="chemin")return;
   const D=islamicDay(new Date());
-  if(D.steps[D.cur].k!==LASTCUR&&!$dlg.innerHTML){vChemin();return}
+  const cs=D.steps[D.cur],g=!!(cs.p&&new Date()-cs.s<GRACE_MS);
+  if((cs.k!==LASTCUR||g!==FOCUSGRACE)&&!$dlg.innerHTML){SCROLLNEXT=!USERMOVED;vChemin();return}
+  document.querySelectorAll("[data-since]").forEach(e=>e.textContent=since(new Date(+e.dataset.since)));
   document.querySelectorAll("[data-cd]").forEach(e=>e.textContent=until(new Date(+e.dataset.cd)));
   const nt=document.querySelector("#now [data-nowt]");if(nt)nt.firstChild.textContent="Maintenant · "+hm(new Date());const c=document.querySelector(".band .skywrap");if(c)c.innerHTML=sunSVG(new Date(),NOWNP);
 },30000);
