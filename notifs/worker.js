@@ -148,7 +148,7 @@ export default {
       }
       if (url.pathname === "/test") {
         if (!validSub(d.sub)) return json({ error: "données" }, 400);
-        const res = await send(env, d.sub, { title: "Au quotidien", body: "Les notifications fonctionnent.", tag: "test" });
+        const res = await send(env, d.sub, { title: "Yawm", body: "Les notifications fonctionnent.", tag: "test" });
         return json({ ok: res.ok, status: res.status }, res.ok ? 200 : 502);
       }
       if (url.pathname === "/unsubscribe") {

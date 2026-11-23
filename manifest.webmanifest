@@ -1,6 +1,6 @@
 {
-  "name": "Musulman au quotidien",
-  "short_name": "Au quotidien",
+  "name": "Yawm - Musulman au quotidien",
+  "short_name": "Yawm",
   "description": "La journée du musulman selon le Coran et la Sunna, avec le Coran et les hadiths en français.",
   "lang": "fr",
   "start_url": "./#chemin",

@@ -5,7 +5,7 @@
 <link rel="preload" href="fonts/cormorant-italic-600.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Musulman au quotidien</title>
+<title>Yawm - Musulman au quotidien</title>
 <meta name="theme-color" content="#0E6B47">
 <meta name="color-scheme" content="light dark">
 <link rel="manifest" href="manifest.webmanifest">
@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png?v=2">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Au quotidien">
+<meta name="apple-mobile-web-app-title" content="Yawm">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -863,7 +863,7 @@ function notifEvents(nDays){
     add(P.maghrib,ti,b,"jeune");
   }
   const last=day(t0,nDays-3),PL=prayerTimes(last,la,ln,m,S.asr);
-  add(new Date(PL.dhuhr.getTime()+30*60000),"Tes rappels s'arrêtent bientôt","Ouvre Au quotidien pour prolonger tes notifications.","renew");
+  add(new Date(PL.dhuhr.getTime()+30*60000),"Tes rappels s'arrêtent bientôt","Ouvre Yawm pour prolonger tes notifications.","renew");
   return ev;
 }
 function notifSupport(){
@@ -892,7 +892,7 @@ async function pushSync(force){
 }
 async function notifEnable(){
   const perm=await Notification.requestPermission();
-  if(perm!=="granted")throw new Error("Notifications refusées. Autorise-les pour Au quotidien dans les réglages du téléphone.");
+  if(perm!=="granted")throw new Error("Notifications refusées. Autorise-les pour Yawm dans les réglages du téléphone.");
   const reg=await navigator.serviceWorker.ready;
   let sub=await reg.pushManager.getSubscription();
   if(!sub){const {key}=await (await fetch(PUSH_URL+"/key")).json();
