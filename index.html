@@ -75,6 +75,8 @@ h1,h2,h3{font-family:var(--display);font-weight:400;text-wrap:balance;margin:0}
 .wmoons span{font-size:12px}
 .wmoons .pc{font-size:11px;opacity:.75}
 .white .wst{font-size:14px}
+.white .wh{font-size:12.5px;opacity:.8;margin-top:-6px}
+.white.dark .wh{margin-top:-2px}
 .white .wn{font-size:12.5px;font-style:italic;color:var(--gold)}
 .white.dark{background:rgba(0,0,0,.18);border-color:rgba(241,217,138,.6);color:#fff;margin-top:8px;padding:8px 10px;gap:4px}
 .white.dark .wt{font-size:15px;color:#F1D98A}
@@ -842,6 +844,9 @@ function moonPanel(now){
 }
 
 /* ---------- Jours blancs ---------- */
+const cap=t=>t.charAt(0).toUpperCase()+t.slice(1);
+function solarRange(a,n){const b=new Date(a.getFullYear(),a.getMonth(),a.getDate()+n-1),wd=d=>d.toLocaleDateString("fr-FR",{weekday:"long"}),mo=d=>d.toLocaleDateString("fr-FR",{month:"long"});
+  return a.getMonth()===b.getMonth()?`du ${wd(a)} ${a.getDate()} au ${wd(b)} ${b.getDate()} ${mo(b)}`:`du ${wd(a)} ${a.getDate()} ${mo(a)} au ${wd(b)} ${b.getDate()} ${mo(b)}`}
 function whiteDays(now){
   const [la,ln]=LL(),m=METHODS[S.method];
   const base=new Date(now.getFullYear(),now.getMonth(),now.getDate());
@@ -864,8 +869,8 @@ function whiteBlock(now,onDark){
   if(now<T[0].fajr)status=`Début du jeûne dans <b data-cd="${T[0].fajr.getTime()}">${until(T[0].fajr)}</b>, au Fajr du ${days[0].toLocaleDateString("fr-FR",{weekday:"long",day:"numeric"})} (${hm(T[0].fajr)})`;
   else if(idx>=0)status=`Jour blanc ${idx+1} sur 3 en cours · rupture au Maghrib dans <b data-cd="${T[idx].maghrib.getTime()}">${until(T[idx].maghrib)}</b> (${hm(T[idx].maghrib)})`;
   else{const k=days.findIndex((d,j)=>now<T[j].fajr);status=`Jour blanc ${k+1} sur 3 : jeûne dans <b data-cd="${T[k].fajr.getTime()}">${until(T[k].fajr)}</b>, au Fajr (${hm(T[k].fajr)})`}
-  return `<div class="white ${onDark?"dark":""}"><div class="wt">Jours blancs · ${HMONTHS[h.m-1]}</div>
-    <div class="wmoons">${days.map((d,k)=>{const mi=moonInfo(new Date(d.getTime()+21*3600e3));return `<div class="${k===idx?"cur":""}">${moonSVG(mi.f,20)}<b>${13+k}</b><span>${d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})}</span><span class="pc">lune à ${Math.round(mi.ill*100)} %</span></div>`}).join("")}</div>
+  return `<div class="white ${onDark?"dark":""}"><div class="wt">Jours blancs · ${solarRange(days[0],3)}</div><div class="wh">(13, 14 et 15 ${HMONTHS[h.m-1]})</div>
+    <div class="wmoons">${days.map((d,k)=>{const mi=moonInfo(new Date(d.getTime()+21*3600e3));return `<div class="${k===idx?"cur":""}">${moonSVG(mi.f,20)}<b>${d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})}</b><span>(${13+k})</span><span class="pc">lune à ${Math.round(mi.ill*100)} %</span></div>`}).join("")}</div>
     <div class="wst">${status}</div><div class="wn">La récompense d'une année de jeûne est promise pour les trois jours accomplis. Allah seul sait.</div></div>`;
 }
 /* ---------- Notifications (Web Push via le serveur Yawm) ---------- */
@@ -889,12 +894,11 @@ function notifEvents(nDays){
     const mois=white?HMONTHS[white.h.m-1]:"",span=white?(white.first===14?"14 et 15":"13, 14 et 15"):"";
     let ti,b;
     if(white&&white.k>1){
-      const debut=day(d,white.k).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
-      ti=`Jours blancs dans ${white.k} jours`;b=`Les ${span} ${mois}, à partir du ${debut}. La récompense d'une année de jeûne est promise pour les trois jours accomplis. Allah seul sait.`;
+      ti=`Jours blancs dans ${white.k} jours`;b=`${cap(solarRange(day(d,white.k),white.first===14?2:3))} (${span} ${mois}). La récompense d'une année de jeûne est promise pour les trois jours accomplis. Allah seul sait.`;
       if(dows.length){ti=`Demain : jeûne du ${dows[0]} · jours blancs dans ${white.k} jours`;b=`Formuler l'intention et prévoir le repas d'avant l'aube. Fajr à ${hm(N.fajr)}, rupture au Maghrib à ${hm(N.maghrib)}. `+b}
     }else{
       const what=[...dows.map(x=>"jeûne du "+x),...(white?["premier des jours blancs"]:[])].join(" et ");
-      ti=`Demain : ${what}`;b=`Formuler l'intention et prévoir le repas d'avant l'aube. Fajr à ${hm(N.fajr)}, rupture au Maghrib à ${hm(N.maghrib)}.${white?` Jours blancs : les ${span} ${mois}.`:""}`;
+      ti=`Demain : ${what}`;b=`Formuler l'intention et prévoir le repas d'avant l'aube. Fajr à ${hm(N.fajr)}, rupture au Maghrib à ${hm(N.maghrib)}.${white?` Jours blancs : ${solarRange(day(d,1),white.first===14?2:3)} (${span} ${mois}).`:""}`;
     }
     add(P.maghrib,ti,b,"jeune");
   }
@@ -910,7 +914,7 @@ function notifSupport(){
   }
   return "ok";
 }
-const notifKey=()=>JSON.stringify([2,LL(),S.method,S.asr,notifOpts(),S.hsrc,S.hAdj||0,S.hOff||0]);
+const notifKey=()=>JSON.stringify([3,LL(),S.method,S.asr,notifOpts(),S.hsrc,S.hAdj||0,S.hOff||0]);
 async function pushPost(path,data){const r=await fetch(PUSH_URL+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(data)});if(!r.ok)throw new Error("serveur "+r.status);return r.json()}
 let PUSHING=null;
 async function pushSync(force){
@@ -978,8 +982,8 @@ function tickMsgs(){
   const L=[],fd=d=>d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
   if(notifSupport()!=="off"&&!notifActive())L.push({h:`<b>Profite des notifications</b> · les prières à l'heure, les jeûnes du lundi, du jeudi et des jours blancs rappelés la veille au Maghrib · <b>Touche ici pour les activer et faire le test</b>`,a:openNotifSheet});
   const w=nextWhite();
-  if(w){const span=w.first===14?"14 et 15":"13, 14 et 15",when=w.now?"en ce moment":"à partir du "+fd(w.d);
-    L.push({h:`<b>Jours blancs</b> · les ${span} ${HMONTHS[w.h.m-1]}, ${when} · « Lorsque tu jeûnes trois jours dans le mois, jeûne le treize, le quatorze et le quinze ! » <i>(Ibn Mâjah, bon)</i> · Trois jours par mois valent le jeûne de toute l'année <i>(Sahîh al-Bukhârî n° 1976)</i>`,a:()=>{location.hash="#jeune"}})}
+  if(w){const when=(w.now?"en ce moment, ":"")+solarRange(w.d,w.first===14?2:3);
+    L.push({h:`<b>Jours blancs</b> · ${when} · « Lorsque tu jeûnes trois jours dans le mois, jeûne le treize, le quatorze et le quinze ! » <i>(Ibn Mâjah, bon)</i> · Trois jours par mois valent le jeûne de toute l'année <i>(Sahîh al-Bukhârî n° 1976)</i>`,a:()=>{location.hash="#jeune"}})}
   const t=new Date();let n=null;for(let k=1;k<=7&&!n;k++){const d=new Date(t.getFullYear(),t.getMonth(),t.getDate()+k);if(d.getDay()===1||d.getDay()===4)n=d}
   L.push({h:`<b>Lundi et jeudi</b> · prochain jeûne ${n?"le "+fd(n):""} · « Les œuvres sont présentées le lundi et le jeudi, et j’aime que mes œuvres soient présentées alors que je jeûne. » <i>(At-Tirmidhî, Muslim, authentique)</i>`,a:()=>{location.hash="#jeune"}});
   return L;
