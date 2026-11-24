@@ -1,4 +1,4 @@
-const CACHE = "au-quotidien-v61";
+const CACHE = "au-quotidien-v62";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-180.png", "img/minaret.svg", "fonts/cormorant-italic-600.woff2", "fonts/arefruqaa.woff2",
   "data/journee.json", "data/jeune.json", "data/alimentation.json", "data/nawafil.json", "data/sourates.json", "data/themes.json", "data/versions.json",
   "data/coran_ar.json", "data/coran_hamidullah.json", "data/coran_maash.json", "data/coran_montada.json", "data/hadiths.json", "data/fiqh.json"];
