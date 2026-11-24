@@ -5,7 +5,7 @@
 <link rel="preload" href="fonts/cormorant-italic-600.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Yawm - Musulman au quotidien</title>
+<title>Nahar - Ma journée Sunna</title>
 <meta name="theme-color" content="#0E6B47">
 <meta name="color-scheme" content="light dark">
 <link rel="manifest" href="manifest.webmanifest">
@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png?v=2">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Yawm">
+<meta name="apple-mobile-web-app-title" content="Nahar">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -891,7 +891,7 @@ function whiteBlock(now,onDark){
     <div class="wmoons">${days.map((d,k)=>{const mi=moonInfo(new Date(d.getTime()+21*3600e3));return `<div class="${k===idx?"cur":""}">${moonSVG(mi.f,20)}<b>${d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})}</b><span>(${13+k})</span><span class="pc">lune à ${Math.round(mi.ill*100)} %</span></div>`}).join("")}</div>
     <div class="wst">${status}</div><div class="wn">La récompense d'une année de jeûne est promise pour les trois jours accomplis. Allah seul sait.</div></div>`;
 }
-/* ---------- Notifications (Web Push via le serveur Yawm) ---------- */
+/* ---------- Notifications (Web Push via le serveur Nahar) ---------- */
 const PUSH_URL="https://yawm-notifs.reflexions-sami.workers.dev";/* adresse du serveur Cloudflare, ex. https://yawm-notifs.xxx.workers.dev */
 const NOTIF_KINDS={pri:["Prières","À l'heure de chaque prière obligatoire."],avant:["Rappel avant la prière","Quelques minutes avant l'adhan, le temps de faire ses ablutions."],lj:["Jeûne du lundi et du jeudi","La veille, au Maghrib."],blanc:["Jours blancs","Trois jours, deux jours puis la veille, au Maghrib."]};
 function notifOpts(){return Object.assign({pri:true,avant:false,avm:10,lj:true,blanc:true},S.notif||{})}
@@ -923,7 +923,7 @@ function notifEvents(nDays){
     add(P.maghrib,ti,b,"jeune");
   }
   const last=day(t0,nDays-3),PL=prayerTimes(last,la,ln,m,S.asr);
-  add(new Date(PL.dhuhr.getTime()+30*60000),"Tes rappels s'arrêtent bientôt","Ouvre Yawm pour prolonger tes notifications.","renew");
+  add(new Date(PL.dhuhr.getTime()+30*60000),"Tes rappels s'arrêtent bientôt","Ouvre Nahar pour prolonger tes notifications.","renew");
   return ev;
 }
 function notifSupport(){
@@ -952,7 +952,7 @@ async function pushSync(force){
 }
 async function notifEnable(){
   const perm=await Notification.requestPermission();
-  if(perm!=="granted")throw new Error("Notifications refusées. Autorise-les pour Yawm dans les réglages du téléphone.");
+  if(perm!=="granted")throw new Error("Notifications refusées. Autorise-les pour Nahar dans les réglages du téléphone.");
   const reg=await navigator.serviceWorker.ready;
   let sub=await reg.pushManager.getSubscription();
   if(!sub){const {key}=await (await fetch(PUSH_URL+"/key")).json();
@@ -1040,7 +1040,7 @@ function onboarding(){
   let k=0;const el=document.createElement("div");el.className="onb";el.setAttribute("role","dialog");el.setAttribute("aria-label","Prise en main");document.body.appendChild(el);
   const done=()=>{try{localStorage.setItem("mq-onboarded","1")}catch(e){}el.classList.add("out");setTimeout(()=>el.remove(),400);route()};
   const screens=[
-    ()=>`<span class="ok">Bienvenue dans Yawm</span><h2>Ta journée, du Maghrib au Maghrib</h2>
+    ()=>`<span class="ok">Bienvenue dans Nahar</span><h2>Ta journée, du Maghrib au Maghrib</h2>
       <ul><li><i>◆</i><span><b>Chemine</b> te montre la prochaine prière et ce que la Sunna recommande à chaque moment.</span></li>
       <li><i>◆</i><span>Chaque pratique est donnée <b>avec sa source</b> et son degré d'authenticité. Touche-la pour lire le hadith.</span></li>
       <li><i>◆</i><span><b>Coran, hadiths, jeûne, dhikr</b> : tout fonctionne aussi hors connexion.</span></li></ul>`,
@@ -1054,7 +1054,7 @@ function onboarding(){
       <li><i>◆</i><span>La veille au Maghrib, un rappel pour le <b>jeûne du lundi, du jeudi et des jours blancs</b>.</span></li></ul>
       ${st==="ok"?`<div class="ob"><button class="pr" id="obon">${on?"Notifications activées":"Activer les notifications"}</button><button id="obtest">Tester</button></div>
         <p class="om" id="obm">${on?"Touche Tester pour vérifier.":"Le téléphone va te demander l'autorisation : touche Autoriser."}</p>`
-      :st==="ios"?`<p class="om">Sur iPhone : touche Partager dans Safari, puis « Sur l'écran d'accueil ». Ouvre ensuite Yawm depuis son icône et active les notifications dans Réglages.</p>`
+      :st==="ios"?`<p class="om">Sur iPhone : touche Partager dans Safari, puis « Sur l'écran d'accueil ». Ouvre ensuite Nahar depuis son icône et active les notifications dans Réglages.</p>`
       :`<p class="om">Tu pourras les activer plus tard dans Réglages.</p>`}`}
   ];
   const show=()=>{

@@ -1,4 +1,4 @@
-// Yawm · serveur de notifications (Cloudflare Worker)
+// Nahar · serveur de notifications (Cloudflare Worker)
 // Auteur : Eyoub Bouarfa
 //
 // L'appli calcule elle-même ses rappels des 30 prochains jours (horaires, jeûnes)
@@ -129,7 +129,7 @@ export default {
     try {
       await init(env);
       if (req.method === "GET" && url.pathname === "/key") return json({ key: (await keys(env)).pub });
-      if (req.method === "GET" && url.pathname === "/") return json({ ok: true, service: "Yawm notifications" });
+      if (req.method === "GET" && url.pathname === "/") return json({ ok: true, service: "Nahar notifications" });
       if (req.method !== "POST") return json({ error: "méthode" }, 405);
       const d = await req.json();
       if (url.pathname === "/schedule") {
@@ -148,7 +148,7 @@ export default {
       }
       if (url.pathname === "/test") {
         if (!validSub(d.sub)) return json({ error: "données" }, 400);
-        const res = await send(env, d.sub, { title: "Yawm", body: "Les notifications fonctionnent.", tag: "test" });
+        const res = await send(env, d.sub, { title: "Nahar", body: "Les notifications fonctionnent.", tag: "test" });
         return json({ ok: res.ok, status: res.status }, res.ok ? 200 : 502);
       }
       if (url.pathname === "/unsubscribe") {

@@ -1,4 +1,4 @@
-# Yawm · Musulman au quotidien
+# Nahar · Ma journée Sunna
 
 Application web installable qui accompagne la journée du musulman, du Maghrib au Maghrib, selon le Coran et la Sunna.
 
