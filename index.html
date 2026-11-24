@@ -428,7 +428,7 @@ const CITIES={
 };
 const METHODS={uoif:{n:"UOIF (12° / 12°)",f:12,i:12},mwl:{n:"Ligue islamique mondiale (18° / 17°)",f:18,i:17},isna:{n:"ISNA (15° / 15°)",f:15,i:15}};
 const FIRSTRUN=(()=>{try{return !localStorage.getItem("mq-settings")&&!localStorage.getItem("mq-onboarded")}catch(e){return false}})();
-let S={city:"Clermont-Ferrand",method:"uoif",asr:1,bed:"22:30",trad:"hamidullah",goal:25,speed:0.55,hsrc:"HJCoSA",hAdj:0,hOff:0};
+let S={city:"Clermont-Ferrand",method:"uoif",asr:1,bed:"22:30",trad:"hamidullah",goal:25,speed:0.55,hsrc:"HJCoSA",hAdj:0,hOff:0,href:"saudi"};
 try{Object.assign(S,JSON.parse(localStorage.getItem("mq-settings")||"{}"))}catch(e){}
 function save(){try{localStorage.setItem("mq-settings",JSON.stringify(S))}catch(e){}}
 
@@ -880,6 +880,13 @@ function whiteDays(now){
   }
   return null;
 }
+function keyDayWarn(now){
+  const out=[];for(let i=-1;i<=7;i++){const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i,12),h=hijri(d);if(!h)continue;
+    const k=KEYDAYS.find(x=>x[0]===h.m&&x[1]===h.d);if(k)out.push([d,k[2],h])}
+  if(!out.length)return "";
+  return out.map(([d,n,h])=>{const ok=hConfirmed(h),dd=d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+    return `<div class="white" style="border-color:${ok?"var(--gold)":"#C86A2B"}"><div class="wt">${esc(n)} : ${dd}</div><div class="wst">${ok?`Date annoncée par ${esc(HREF[S.href])}.`:`Selon le calcul (${esc(HREF[S.href])}). <b>Date à confirmer auprès de ta mosquée</b> : aucun rappel de jeûne n'est envoyé autour de ce jour tant qu'elle n'est pas annoncée.`}</div></div>`}).join("");
+}
 function whiteBlock(now,onDark){
   const W=whiteDays(now);if(!W)return "";
   const {days,T,h}=W;let status;
@@ -899,7 +906,7 @@ function notifEvents(nDays){
   const [la,ln]=LL(),m=METHODS[S.method],o=notifOpts(),ev=[],now=Date.now();
   const add=(t,ti,b,tg)=>{if(t.getTime()>now+30000)ev.push({t:t.getTime(),ti,b,tg})};
   const t0=new Date();t0.setHours(0,0,0,0);
-  const forbidden=h=>h&&(h.m===9||(h.m===10&&h.d===1)||(h.m===12&&h.d>=10&&h.d<=13));
+  const forbidden=h=>h&&(h.m===9||(h.m===10&&h.d===1)||(h.m===12&&h.d>=10&&h.d<=13)||(hSensitive(h)&&!hConfirmed(h)));
   const day=(d,k)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+k);
   for(let i=0;i<nDays;i++){
     const d=day(t0,i),P=prayerTimes(d,la,ln,m,S.asr);
@@ -909,7 +916,7 @@ function notifEvents(nDays){
     const tm=day(d,1),ht=hijri(tm),N=prayerTimes(tm,la,ln,m,S.asr),dows=[];
     if(o.lj&&!forbidden(ht)){if(tm.getDay()===1)dows.push("lundi");if(tm.getDay()===4)dows.push("jeudi")}
     let white=null;
-    if(o.blanc)for(let k=1;k<=3;k++){const h=hijri(day(d,k)),first=h&&h.m===12?14:13;if(h&&h.d===first&&h.m!==9){white={k,h,first};break}}
+    if(o.blanc)for(let k=1;k<=3;k++){const h=hijri(day(d,k)),first=h&&h.m===12?14:13;if(h&&h.d===first&&h.m!==9&&!(hSensitive(h)&&!hConfirmed(h))){white={k,h,first};break}}
     if(!dows.length&&!white)continue;
     const mois=white?HMONTHS[white.h.m-1]:"",span=white?(white.first===14?"14 et 15":"13, 14 et 15"):"";
     let ti,b;
@@ -934,7 +941,7 @@ function notifSupport(){
   }
   return "ok";
 }
-const notifKey=()=>JSON.stringify([4,LL(),S.method,S.asr,notifOpts(),S.hsrc,S.hAdj||0,S.hOff||0]);
+const notifKey=()=>JSON.stringify([5,S.href,JSON.stringify((S.offi||{})[S.href]||[]),LL(),S.method,S.asr,notifOpts(),S.hsrc,S.hAdj||0,S.hOff||0]);
 async function pushPost(path,data){const r=await fetch(PUSH_URL+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(data)});if(!r.ok)throw new Error("serveur "+r.status);return r.json()}
 let PUSHING=null;
 async function pushSync(force){
@@ -1048,6 +1055,7 @@ function onboarding(){
       <ul><li><i>◆</i><span>Ils sont calculés pour ta ville, directement sur ton téléphone.</span></li>
       <li><i>◆</i><span>Ville actuelle : <b id="obcity">${esc(placeName())}</b></span></li></ul>
       <div class="ob"><button class="pr" id="obgeo">Utiliser ma position</button></div>
+      <label style="display:grid;gap:6px;font-size:14px">Début des mois (Ramadan, Aïds) selon<select id="obref" style="padding:11px;border-radius:12px;font-size:15px">${Object.entries(HREF).map(([k,v])=>`<option value="${k}" ${S.href===k?"selected":""}>${v}</option>`).join("")}</select></label>
       <p class="om" id="obm">Tu peux aussi choisir ta ville et la méthode de calcul dans Réglages.</p>`,
     ()=>{const st=notifSupport(),on=notifActive();return `<span class="ok">Étape 3 sur 3</span><h2>Ne manque aucune prière</h2>
       <ul><li><i>◆</i><span>Une notification <b>à l'heure de chaque prière</b>.</span></li>
@@ -1062,6 +1070,7 @@ function onboarding(){
     const m=t=>{const e=document.getElementById("obm");if(e)e.textContent=t};
     document.getElementById("obnx").onclick=()=>{if(k<2){k++;show()}else done()};
     const sk=document.getElementById("obskip");if(k<2)sk.onclick=done;
+    const rf=document.getElementById("obref");if(rf)rf.onchange=()=>{S.href=rf.value;save()};
     const g=document.getElementById("obgeo");if(g)g.onclick=()=>{m("Localisation…");S.autoLoc=true;locate().then(()=>{document.getElementById("obcity").textContent=placeName();m("C'est fait. Tes horaires sont calculés pour "+placeName()+".")}).catch(e=>m(e.message))};
     const a=document.getElementById("obon");if(a)a.onclick=()=>{if(notifActive()){m("Déjà activées. Touche Tester.");return}m("Activation…");notifEnable().then(()=>{a.textContent="Notifications activées";m("C'est fait. Touche Tester pour vérifier.")}).catch(e=>m(e.message))};
     const t=document.getElementById("obtest");if(t)t.onclick=()=>{m("Envoi d'une notification de test…");notifTest().then(()=>m("Envoyée : elle arrive dans quelques secondes.")).catch(e=>m(e.message))};
@@ -1142,7 +1151,27 @@ function listCards(arr,key){return arr.map((x,i)=>`<button class="card ${x.src==
 /* ---------- Calendrier hégirien ---------- */
 const HMONTHS=["Muharram","Safar","Rabî' al-awwal","Rabî' ath-thânî","Joumâdâ al-oûlâ","Joumâdâ ath-thâniya","Rajab","Sha'bân","Ramadân","Shawwâl","Dhoû al-qa'da","Dhoû al-hijja"];
 const HSRC={HJCoSA:"En ligne : Haut conseil de la magistrature saoudien",DIYANET:"En ligne : Diyanet (Turquie)",UAQ:"En ligne : Umm al-Qura",offline:"Hors ligne : calcul Umm al-Qura"};
-function hijri(d){const k=(S.hsrc==="offline"?0:(S.hOff||0))+(S.hAdj||0);return hijriLocal(k?new Date(d.getFullYear(),d.getMonth(),d.getDate()+k,12):d)}
+const HREF={saudi:"Arabie saoudite",paris:"Grande Mosquée de Paris"};
+function hOfficial(d){const L=(S.offi&&S.offi[S.href])||[];if(!L.length)return null;const t=new Date(d.getFullYear(),d.getMonth(),d.getDate(),12).getTime();let best=null;
+  for(const e of L){const p=e.debut.split("-").map(Number),s0=new Date(p[0],p[1]-1,p[2],12).getTime();if(s0<=t&&(!best||s0>best.s0))best={e,s0}}
+  if(!best)return null;const diff=Math.round((t-best.s0)/864e5);return diff<30?{d:diff+1,m:best.e.m,y:best.e.y,official:true}:null}
+function hConfirmed(h){return !!(h&&S.offi&&(S.offi[S.href]||[]).some(e=>e.y===h.y&&e.m===h.m))}
+/* jours où un décalage d'un jour change ce qui est permis : doute de Chaabane, Ramadan, Aïds, Arafat */
+function hSensitive(h){return !!h&&((h.m===8&&h.d>=29)||(h.m===9&&(h.d<=1||h.d>=29))||(h.m===10&&h.d<=2)||(h.m===12&&h.d>=8&&h.d<=14))}
+const KEYDAYS=[[9,1,"1er Ramadan"],[10,1,"Aïd al-Fitr"],[12,9,"Jour d'Arafat"],[12,10,"Aïd al-Adha"],[1,9,"9 Mouharram"],[1,10,"Achoura"]];
+async function syncOfficial(force){
+  if(!force&&S.offiAt&&Date.now()-S.offiAt<6*3600e3)return;
+  try{const r=await fetch("data/hijri-officiel.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
+    const ch=JSON.stringify(j)!==JSON.stringify(S.offi);S.offi=j;S.offiAt=Date.now();save();if(ch&&["chemin","jeune"].includes(view)&&!$dlg.innerHTML)route()}catch(e){}
+}
+function hijriBase(d){const k=(S.hsrc==="offline"?0:(S.hOff||0))+(S.hAdj||0);return hijriLocal(k?new Date(d.getFullYear(),d.getMonth(),d.getDate()+k,12):d)}
+function hijri(d){const o=hOfficial(d);if(o)return o;
+  /* jours juste avant un début officiel retardé : on décale le calcul pour éviter deux « 1er » */
+  const L=(S.offi&&S.offi[S.href])||[],t=new Date(d.getFullYear(),d.getMonth(),d.getDate(),12).getTime();
+  for(const e of L){const p=e.debut.split("-").map(Number),s0=new Date(p[0],p[1]-1,p[2],12).getTime(),gap=Math.round((s0-t)/864e5);
+    if(gap<1||gap>29)continue;
+    for(let j=-3;j<=0;j++){const x=hijriBase(new Date(s0+j*864e5));if(x&&x.d===1&&x.m===e.m){const sh=-j;if(sh>0)return hijriBase(new Date(t-sh*864e5));break}}}
+  return hijriBase(d)}
 async function syncHijri(force){
   if(S.hsrc==="offline")return;
   const today=new Date();today.setHours(12,0,0,0);
@@ -1193,9 +1222,10 @@ async function vJeune(){
     <div class="row" style="margin-top:12px"><div class="seg" role="tablist"><button class="${JSEG==="jeuner"?"on":""}" data-seg="jeuner">Jeûner</button><button class="${JSEG==="alim"?"on":""}" data-seg="alim">S'alimenter</button></div></div>`;
   if(JSEG==="jeuner"){
     const days=[];for(let i=0;i<45&&days.length<12;i++){const d=new Date(today.getFullYear(),today.getMonth(),today.getDate()+i),t=fastTags(d);if(t.tags.length)days.push([d,t])}
+    h+=keyDayWarn(today);
     h+=whiteBlock(today,false);
     h+=`<div class="box"><h3>Prochains jours de jeûne</h3><div class="cards">${days.map(([d,t])=>`<div class="fday ${t.no?"no":""}"><span class="d">${d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})}</span><span><b>${esc(t.tags.join(" · "))}</b><br><span class="h">${t.h?t.h.d+" "+HMONTHS[t.h.m-1]:""}</span></span></div>`).join("")}</div>
-      <p class="src" style="margin:0">Mois : ${esc(hijriStatus())} Ta mosquée peut annoncer un jour d'écart, selon l'observation de la lune : corrige-le dans les Réglages. Allah seul sait.</p></div>`;
+      <p class="src" style="margin:0">Mois : ${esc(hijriStatus())} Référence : ${esc(HREF[S.href])}. Ta mosquée peut annoncer un jour d'écart : choisis ta référence dans les Réglages. Allah seul sait.</p></div>`;
     JE.forEach((sec,si)=>{h+=`<div class="box"><h3>${esc(sec.t)}</h3><p style="margin:0">${esc(sec.intro)}</p><div class="cards">${listCards(sec.items,"je"+si)}</div></div>`});
   }else{
     AL.forEach((sec,si)=>{h+=`<div class="box"><h3>${esc(sec.t)}</h3>${sec.intro?`<p style="margin:0">${esc(sec.intro)}</p>`:""}<div class="cards">${listCards(sec.items,"al"+si)}</div></div>`});
@@ -1493,7 +1523,9 @@ function vReglages(){
     <p class="src" style="margin:0">Aujourd'hui : Fajr ${hm(T.fajr)} · Lever ${hm(T.sunrise)} · Dhuhr ${hm(T.dhuhr)} · Asr ${hm(T.asr)} · Maghrib ${hm(T.maghrib)}. Compare-les une fois avec ta mosquée et ajuste la méthode si besoin.</p>
   </div>
   <div class="box"><h3>Début des mois hégiriens</h3>
-    <label for="hsrc">Source<select id="hsrc">${Object.entries(HSRC).map(([k,v])=>`<option value="${k}" ${S.hsrc===k?"selected":""}>${v}</option>`).join("")}</select></label>
+    <label for="href">Début des mois suivi par ta communauté<select id="href">${Object.entries(HREF).map(([k,v])=>`<option value="${k}" ${S.href===k?"selected":""}>${v}</option>`).join("")}</select></label>
+    <p class="src" style="margin:0">Les dates officielles du Ramadan, des Aïds et de Dhou al-Hijja sont ajoutées dès leur annonce et s'appliquent automatiquement. Le reste de l'année : calcul ci-dessous.</p>
+    <label for="hsrc">Source du calcul<select id="hsrc">${Object.entries(HSRC).map(([k,v])=>`<option value="${k}" ${S.hsrc===k?"selected":""}>${v}</option>`).join("")}</select></label>
     <label for="hadj">Correction pour suivre ta mosquée<select id="hadj">${[-1,0,1].map(v=>`<option value="${v}" ${(S.hAdj||0)===v?"selected":""}>${v===0?"Aucune":(v>0?"+1 jour":"−1 jour")}</option>`).join("")}</select></label>
     <p class="src" style="margin:0" id="hst">${esc(hijriStatus())}</p>
     <div class="row"><button class="btn" id="hsync">Vérifier maintenant</button></div>
@@ -1522,6 +1554,7 @@ function vReglages(){
   ["city","method","asr","bed"].forEach(id=>document.getElementById(id).onchange=up);
   $app.querySelectorAll("[data-ics]").forEach(b=>b.onclick=()=>downloadICS(b.dataset.ics));
   bindNotif();
+  document.getElementById("href").onchange=e=>{S.href=e.target.value;save();route();pushSync(true)};
   document.getElementById("hsrc").onchange=e=>{S.hsrc=e.target.value;save();syncHijri(true).then(()=>{if(view==="reglages")vReglages()});vReglages()};
   document.getElementById("hadj").onchange=e=>{S.hAdj=+e.target.value;save();vReglages()};
   document.getElementById("hsync").onclick=()=>{document.getElementById("hst").textContent="Vérification…";syncHijri(true).then(()=>{if(view==="reglages")vReglages()})};
@@ -1550,7 +1583,7 @@ const ACCUEIL=[{"id":5348,"fr":"Ne méprise rien du bien, ne serait-ce que de re
   Promise.race([document.fonts?document.fonts.ready:Promise.resolve(),new Promise(r=>setTimeout(r,1500))]).then(ready);
 })();
 try{if("serviceWorker" in navigator&&location.protocol==="https:"&&!/claude\.ai|claudeusercontent/.test(location.hostname))navigator.serviceWorker.register("sw.js").catch(()=>{})}catch(e){}
-load("journee").then(d=>{J=d;route();syncHijri();autoLocate();setInterval(()=>syncHijri(),6*3600e3)}).catch(()=>{$app.innerHTML='<p class="loading">Les données n\'ont pas pu être chargées. Recharge la page.</p>'});
+load("journee").then(d=>{J=d;route();syncHijri();syncOfficial();setInterval(()=>syncOfficial(),6*3600e3);autoLocate();setInterval(()=>syncHijri(),6*3600e3)}).catch(()=>{$app.innerHTML='<p class="loading">Les données n\'ont pas pu être chargées. Recharge la page.</p>'});
 </script>
 </body>
 </html>
