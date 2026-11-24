@@ -893,8 +893,8 @@ function whiteBlock(now,onDark){
 }
 /* ---------- Notifications (Web Push via le serveur Yawm) ---------- */
 const PUSH_URL="https://yawm-notifs.reflexions-sami.workers.dev";/* adresse du serveur Cloudflare, ex. https://yawm-notifs.xxx.workers.dev */
-const NOTIF_KINDS={pri:["Prières","À l'heure de chaque prière obligatoire."],lj:["Jeûne du lundi et du jeudi","La veille, au Maghrib."],blanc:["Jours blancs","Trois jours, deux jours puis la veille, au Maghrib."]};
-function notifOpts(){return Object.assign({pri:true,lj:true,blanc:true},S.notif||{})}
+const NOTIF_KINDS={pri:["Prières","À l'heure de chaque prière obligatoire."],avant:["Rappel avant la prière","Quelques minutes avant l'adhan, le temps de faire ses ablutions."],lj:["Jeûne du lundi et du jeudi","La veille, au Maghrib."],blanc:["Jours blancs","Trois jours, deux jours puis la veille, au Maghrib."]};
+function notifOpts(){return Object.assign({pri:true,avant:false,avm:10,lj:true,blanc:true},S.notif||{})}
 function notifEvents(nDays){
   const [la,ln]=LL(),m=METHODS[S.method],o=notifOpts(),ev=[],now=Date.now();
   const add=(t,ti,b,tg)=>{if(t.getTime()>now+30000)ev.push({t:t.getTime(),ti,b,tg})};
@@ -903,7 +903,9 @@ function notifEvents(nDays){
   const day=(d,k)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+k);
   for(let i=0;i<nDays;i++){
     const d=day(t0,i),P=prayerTimes(d,la,ln,m,S.asr);
-    if(o.pri)[["Fajr",P.fajr],["Dhuhr",P.dhuhr],["Asr",P.asr],["Maghrib",P.maghrib],["Isha",P.isha]].forEach(([n,t])=>add(t,`${n} · ${hm(t)}`,"☺️","pri"));
+    const five=[["Fajr",P.fajr],["Dhuhr",P.dhuhr],["Asr",P.asr],["Maghrib",P.maghrib],["Isha",P.isha]];
+    if(o.avant){const mn=+o.avm||10;five.forEach(([n,t])=>add(new Date(t.getTime()-mn*60000),`${n} dans ${mn} min · ${hm(t)}`,"Le temps de faire tes ablutions.","pri"))}
+    if(o.pri)five.forEach(([n,t])=>add(t,`${n} · ${hm(t)}`,"☺️","pri"));
     const tm=day(d,1),ht=hijri(tm),N=prayerTimes(tm,la,ln,m,S.asr),dows=[];
     if(o.lj&&!forbidden(ht)){if(tm.getDay()===1)dows.push("lundi");if(tm.getDay()===4)dows.push("jeudi")}
     let white=null;
@@ -974,13 +976,14 @@ function notifBox(){
     :"Désactivées.";
   return `<div class="box"><h3>Notifications</h3>
     <p style="margin:0" id="ntst">${msg}</p>
-    ${st==="ok"?`${Object.entries(NOTIF_KINDS).map(([k,[n,d]])=>`<label style="display:flex;gap:8px;align-items:flex-start;font-weight:600"><input type="checkbox" data-nk="${k}" ${o[k]?"checked":""} style="margin-top:4px"><span>${n}<span class="src" style="display:block;font-weight:400">${d}</span></span></label>`).join("")}
+    ${st==="ok"?`${Object.entries(NOTIF_KINDS).map(([k,[n,d]])=>`<label style="display:flex;gap:8px;align-items:flex-start;font-weight:600"><input type="checkbox" data-nk="${k}" ${o[k]?"checked":""} style="margin-top:4px"><span>${n}<span class="src" style="display:block;font-weight:400">${d}</span>${k==="avant"?`<select id="navm" aria-label="Minutes avant la prière" style="margin-top:6px;font-weight:400">${[5,10,15].map(x=>`<option value="${x}" ${(+o.avm||10)===x?"selected":""}>${x} minutes avant</option>`).join("")}</select>`:""}</span></label>`).join("")}
     <div class="row">${on?`<button class="btn" id="noff">Désactiver</button><button class="btn gold" id="ntest">Tester</button>`:`<button class="btn primary" id="non">Activer les notifications</button>`}</div>`:""}
     <p class="src" style="margin:0">L'appli prépare les rappels des 30 prochains jours et les remet au serveur d'envoi : des heures et des textes, sans ta position. Ils se renouvellent à chaque ouverture.</p></div>`;
 }
 function bindNotif(){
   const m=t=>{const e=document.getElementById("ntst");if(e)e.textContent=t};
   $app.querySelectorAll("[data-nk]").forEach(c=>c.onchange=()=>{const o=notifOpts();o[c.dataset.nk]=c.checked;S.notif=o;save();pushSync(true)});
+  const avm=document.getElementById("navm");if(avm)avm.onchange=()=>{const o=notifOpts();o.avm=+avm.value;S.notif=o;save();pushSync(true)};
   const on=document.getElementById("non"),off=document.getElementById("noff"),te=document.getElementById("ntest");
   if(on)on.onclick=()=>{m("Activation…");notifEnable().then(()=>vReglages()).catch(e=>m(e.message))};
   if(off)off.onclick=()=>{notifDisable().then(()=>vReglages())};
@@ -1370,13 +1373,16 @@ async function renderSura(){
 
 
 /* ---------- Récitation (audio en ligne, verset par verset) ---------- */
-const QARIS=[["ar.alafasy","Mishary Al-Afasy"],["ar.husary","Mahmoud Al-Husary"],["ar.minshawi","Al-Minshawi"],["ar.abdulbasitmurattal","Abdul Basit"],["ar.mahermuaiqly","Maher Al-Muaiqly"],["ar.abdurrahmaansudais","As-Sudais"]];
+const QARIS=[["ar.alafasy","Mishary Al-Afasy"],["ar.husary","Mahmoud Al-Husary"],["ar.minshawi","Al-Minshawi"],["ar.abdulbasitmurattal","Abdul Basit"],["ar.mahermuaiqly","Maher Al-Muaiqly"],["ar.abdurrahmaansudais","As-Sudais"],["yasser","Yasser Al-Dossari"]];
 const FULL={"ar.alafasy":["https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/","https://server8.mp3quran.net/afs/"],
  "ar.husary":["https://download.quranicaudio.com/quran/mahmood_khaleel_al-husaree/","https://server13.mp3quran.net/husr/"],
  "ar.minshawi":["https://download.quranicaudio.com/quran/muhammad_siddeeq_al-minshaawee/","https://server10.mp3quran.net/minsh/"],
  "ar.abdulbasitmurattal":["https://download.quranicaudio.com/quran/abdul_basit_murattal/","https://server7.mp3quran.net/basit/"],
  "ar.mahermuaiqly":["https://server12.mp3quran.net/maher/","https://download.quranicaudio.com/quran/maher_almu3aiqly/year1440/"],
- "ar.abdurrahmaansudais":["https://download.quranicaudio.com/quran/abdurrahmaan_as-sudays/","https://server11.mp3quran.net/sds/"]};
+ "ar.abdurrahmaansudais":["https://download.quranicaudio.com/quran/abdurrahmaan_as-sudays/","https://server11.mp3quran.net/sds/"],
+ "yasser":["https://server11.mp3quran.net/yasser/","https://download.quranicaudio.com/quran/yasser_ad-dussary/"]};
+/* Récitateurs absents du service verset par verset habituel : fichiers EveryAyah (sourate et verset sur 3 chiffres) */
+const EVERYAYAH={"yasser":"https://everyayah.com/data/Yasser_Ad-Dussary_128kbps/"};
 const FA=[new Audio(),new Audio()];FA.forEach(x=>x.preload="auto");
 function fCur(){return FA[REC.fi||0]}function fNext(){return FA[1-(REC.fi||0)]}
 function fSrc(el,n){const list=FULL[S.qari||"ar.alafasy"]||FULL["ar.alafasy"],f=String(n).padStart(3,"0")+".mp3";let k=0;
@@ -1407,7 +1413,7 @@ FA.forEach(el=>{
 });
 const REC={a:new Audio(),n:0,off:0,cnt:0,i:-1,basm:false,on:false};
 REC.a.preload="auto";
-function recUrl(g,br){return `https://cdn.islamic.network/quran/audio/${br||128}/${S.qari||"ar.alafasy"}/${g}.mp3`}
+function recUrl(g,br,s,a){const q=S.qari||"ar.alafasy";if(EVERYAYAH[q])return EVERYAYAH[q]+String(s).padStart(3,"0")+String(a).padStart(3,"0")+".mp3";return `https://cdn.islamic.network/quran/audio/${br||128}/${q}/${g}.mp3`}
 function recMark(){document.querySelectorAll(".verse.playing").forEach(v=>v.classList.remove("playing"));
   const b=document.getElementById("recbar");if(!b)return;
   b.querySelector(".rp").innerHTML=REC.on?"❚❚":"▶";b.querySelector(".ri").textContent=REC.i<0?"Prêt":(REC.full?`Sourate ${REC.n} 🔒`:(REC.basm?"Basmala":`Verset ${REC.i+1} / ${REC.cnt}`));
@@ -1418,9 +1424,9 @@ function recPlay(i){
   REC.full=false;
   REC.i=i;const g=REC.off+i+1;
   REC.basm=(i===0&&REC.n!==1&&REC.n!==9&&!REC.basmDone);
-  const src=REC.basm?1:g;let tried=128;
-  REC.a.onerror=()=>{if(tried===128){tried=64;REC.a.src=recUrl(src,64);REC.a.play().catch(()=>{})}else{recStop();toast("La récitation demande une connexion internet.")}};
-  REC.a.src=recUrl(src,128);REC.a.playbackRate=1;
+  const src=REC.basm?1:g,ss=REC.basm?1:REC.n,sa=REC.basm?1:i+1;let tried=128;
+  REC.a.onerror=()=>{if(tried===128){tried=64;REC.a.src=recUrl(src,64,ss,sa);REC.a.play().catch(()=>{})}else{recStop();toast("La récitation demande une connexion internet.")}};
+  REC.a.src=recUrl(src,128,ss,sa);REC.a.playbackRate=1;
   REC.a.play().then(()=>{REC.on=true;recMark()}).catch(()=>{REC.on=false;recMark()});
   if("mediaSession" in navigator){try{navigator.mediaSession.metadata=new MediaMetadata({title:`Sourate ${REC.n}, verset ${i+1}`,artist:(QARIS.find(q=>q[0]===(S.qari||"ar.alafasy"))||[0,""])[1],album:"Musulman au quotidien",artwork:[{src:"icons/icon-512.png",sizes:"512x512",type:"image/png"}]})}catch(e){}}
   recMark()}
