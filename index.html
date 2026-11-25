@@ -948,7 +948,7 @@ async function pushSync(force){
   if(PUSHING){await PUSHING.catch(()=>{});if(!force)return}
   PUSHING=(async()=>{try{
     if(!S.notifOn||notifSupport()!=="ok"||Notification.permission!=="granted")return;
-    const k=notifKey();if(!force&&S.pushKey===k&&Date.now()-(S.pushAt||0)<20*3600000)return;
+    const k=notifKey();if(!force&&S.pushKey===k&&Date.now()-(S.pushAt||0)<7*864e5)return;
     const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
     if(!sub){S.notifOn=false;save();return}
     const ev=notifEvents(30),res=await pushPost("/schedule",{sub:sub.toJSON(),events:ev});
@@ -985,7 +985,7 @@ function notifBox(){
     <p style="margin:0" id="ntst">${msg}</p>
     ${st==="ok"?`${Object.entries(NOTIF_KINDS).map(([k,[n,d]])=>`<label style="display:flex;gap:8px;align-items:flex-start;font-weight:600"><input type="checkbox" data-nk="${k}" ${o[k]?"checked":""} style="margin-top:4px"><span>${n}<span class="src" style="display:block;font-weight:400">${d}</span>${k==="avant"?`<select id="navm" aria-label="Minutes avant la prière" style="margin-top:6px;font-weight:400">${[5,10,15].map(x=>`<option value="${x}" ${(+o.avm||10)===x?"selected":""}>${x} minutes avant</option>`).join("")}</select>`:""}</span></label>`).join("")}
     <div class="row">${on?`<button class="btn" id="noff">Désactiver</button><button class="btn gold" id="ntest">Tester</button>`:`<button class="btn primary" id="non">Activer les notifications</button>`}</div>`:""}
-    <p class="src" style="margin:0">L'appli prépare les rappels des 30 prochains jours et les remet au serveur d'envoi : des heures et des textes, sans ta position. Ils se renouvellent à chaque ouverture.</p></div>`;
+    <p class="src" style="margin:0">L'appli prépare les rappels des 30 prochains jours et les remet au serveur d'envoi : des heures et des textes, sans ta position. Ils se renouvellent chaque semaine, ou dès qu'un réglage change.</p></div>`;
 }
 function bindNotif(){
   const m=t=>{const e=document.getElementById("ntst");if(e)e.textContent=t};
